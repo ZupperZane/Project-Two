@@ -1,73 +1,45 @@
-# React + TypeScript + Vite
+# Project Two
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + Vite frontend with an Express server and MongoDB-backed API endpoints.
 
-Currently, two official plugins are available:
+## How MongoDB Works (short version)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- MongoDB stores JSON-like documents (BSON) instead of rows/tables.
+- Documents live in collections (similar to tables).
+- You query documents by fields, and add indexes for fast lookups.
+- In production, MongoDB usually runs as a replica set for availability.
 
-## React Compiler
+## MongoDB Wiring In This Repo
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+This repo now includes:
 
-## Expanding the ESLint configuration
+- `mongo.js`: shared MongoDB client/DB connection.
+- `index.js`: API routes:
+  - `GET /api/health`
+  - `GET /api/messages`
+  - `POST /api/messages`
+- `vite.config.ts`: dev proxy from frontend `/api/*` to `http://localhost:3000`.
+- `src/pages/Home.tsx`: demo UI that reads/writes messages via the API.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Setup
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+1. Create `.env` from `.env.example`.
+2. Fill in:
+   - `MONGODB_URI` (Atlas or local MongoDB URI)
+   - `MONGODB_DB` (database name, default is `project_two`)
+3. Run backend and frontend in separate terminals:
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run server
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Quick API Check
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+curl http://localhost:3000/api/health
+curl http://localhost:3000/api/messages
+curl -X POST http://localhost:3000/api/messages \
+  -H "Content-Type: application/json" \
+  -d '{"text":"hello mongo"}'
 ```
