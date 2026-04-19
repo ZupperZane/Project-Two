@@ -11,6 +11,9 @@ import Employer from "../pages/EmployerID";
 import Jobs from "../pages/Jobs";
 import JobID from "../pages/JobID";
 
+import Login from "../pages/LoginPage";
+import Signup from "../pages/SignUpPage";
+
 const mainRouter: RouteObject[] = [
   {
     path: ROUTES.LANDING,
@@ -40,7 +43,13 @@ const mainRouter: RouteObject[] = [
         {
         path: "JobID",
         element: <JobID />,
-      },
+      },{
+        path: "Login",
+        element:<Login/>
+      },{
+        path: "signup",
+        element: <Signup/>
+      }
     ],
   },
 ];
