@@ -1,3 +1,33 @@
+:light-mode {
+  --base: #A2E8E8;
+  --button-light: #A2C5E8;
+  --button-mid: #3A56DB;
+  --button-heavy: #1937A6;
+  --text-1: #2B2B2B;
+  --text-2: #E3E3E3;
+  --secondary1: #E3C698;
+  --secondary2: #E0C475;
+  --pos-primary: #66EDA3;
+  --pos-secondary: #32C273;
+  --neg-primary: #FAA591;
+  --neg-secondary: #ED6455;
+}
+
+:dark-mode {
+  --base: #0D3838;
+  --button-light: #2F2A92;
+  --button-mid: #0086D1;
+  --button-heavy: #5CC4EB;
+  --text-1: #E3E3E3;
+  --text-2: #2B2B2B;
+  --secondary1: #8A7D65;
+  --secondary2: #948351;
+  --pos-primary: #1A7341;
+  --pos-secondary: #43B070;
+  --neg-primary: #8A1911;
+  --neg-secondary: #B3221B;
+}
+
 .counter {
   font-size: 16px;
   padding: 5px 10px;
