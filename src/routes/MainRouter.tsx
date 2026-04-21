@@ -1,8 +1,9 @@
 import { Navigate } from "react-router-dom";
 import type { RouteObject } from "react-router-dom";
-import Root from "../layout/root";
+import Root from "../layout/Root";
 import { ROUTES } from "../utils/constants";
 import Home from "../pages/Home";
+import ErrorPage from "../pages/ErrorPage";
 
 import Employers from "../pages/Employers";
 import Employer from "../pages/EmployerID";
@@ -10,10 +11,14 @@ import Employer from "../pages/EmployerID";
 import Jobs from "../pages/Jobs";
 import JobID from "../pages/JobID";
 
+import Login from "../pages/LoginPage";
+import Signup from "../pages/SignUpPage";
+
 const mainRouter: RouteObject[] = [
   {
     path: ROUTES.LANDING,
     element: <Root />,
+    errorElement: <ErrorPage />,
     children: [
       {
         index: true,
@@ -38,7 +43,13 @@ const mainRouter: RouteObject[] = [
         {
         path: "JobID",
         element: <JobID />,
-      },
+      },{
+        path: "Login",
+        element:<Login/>
+      },{
+        path: "signup",
+        element: <Signup/>
+      }
     ],
   },
 ];

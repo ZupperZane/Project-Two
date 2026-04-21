@@ -1,0 +1,44 @@
+.navbar {
+  width: 100%;
+  max-width: 1100px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  margin: 0 auto;
+  border-radius: 16px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.nav-links {
+  display: flex;
+  gap: 12px;
+}
+
+.nav-button {
+  font-size: 1.1rem;
+  font-weight: 600;
+  padding: 8px 20px;
+  border-radius: 8px;
+  text-decoration: none;
+  background-color: #2563eb; /* blue */
+  color: white;
+  transition: background 0.2s ease;
+}
+
+.nav-button:hover {
+  background-color: #1e40af;
+}
+
+.nav-search input {
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.nav-search{
+    flex:1;
+    margin-left: 18px ;
+    margin-right: 18px;
+}
