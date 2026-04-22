@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import "../css/DisplayAllJobs.css";
 
 type Job = {
   _id: string;
@@ -22,46 +22,45 @@ function JobCard({ job }: { job: Job }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
- <Link to={`/jobs/${job._id}`}>
-    <article>
-      <div>
+    <article className="job-card">
+      <div className="job-top">
         <h2>{job.name}</h2>
-        <p>{job.company}</p>
-        <span>{job.details?.type ?? "—"}</span>
+        <p className="job-company">{job.company}</p>
+        <span className="job-type">{job.details?.type ?? "—"}</span>
       </div>
 
-      <div>
-        <span>${job.salary?.toLocaleString()}</span>
+      <div className="job-meta">
+        <span><strong>${job.salary?.toLocaleString()}</strong></span>
         <span>/yr</span>
         {job.details?.shift && <span>{job.details.shift}</span>}
         <span>{job.idCode}</span>
       </div>
 
-      {job.details?.description && <p>{job.details.description}</p>}
+      {job.details?.description && (
+        <p className="job-description">
+          {expanded
+            ? job.details.description
+            : `${job.details.description.slice(0, 120)}${job.details.description.length > 120 ? "..." : ""}`}
+        </p>
+      )}
 
       {job.details?.benefits?.length > 0 && (
-        <div>
+        <div className="job-benefits">
           {job.details.benefits
             .slice(0, expanded ? undefined : 3)
             .map((b) => (
-              <span key={b}>{b}</span>
+              <span key={b} className="benefit-tag">{b}</span>
             ))}
           {!expanded && job.details.benefits.length > 3 && (
-            <span>+{job.details.benefits.length - 3} more</span>
+            <span className="benefit-tag more-tag">+{job.details.benefits.length - 3} more</span>
           )}
         </div>
       )}
 
-        <button
-          onClick={(e) => {
-            e.preventDefault(); // stops navigation
-            setExpanded((e) => !e);
-          }}
-        >
-          {expanded ? "Show less" : "View details"}
-        </button>
+      <button className="job-button" onClick={() => setExpanded((e) => !e)}>
+        {expanded ? "Show less" : "View details"}
+      </button>
     </article>
-  </Link>
   );
 }
 
@@ -87,17 +86,21 @@ function DisplayAllJobs() {
   }, []);
 
   return (
-    <div>
-      <div>
+    <div className="jobs-container">
+      <div className="jobs-header">
         <h1>Job listings</h1>
         <p>{jobs.length} position{jobs.length !== 1 ? "s" : ""} available</p>
       </div>
 
       <div>
-        {loading && <div>Loading jobs…</div>}
+        {loading && <div className="jobs-message">Loading jobs...</div>}
+        {error && <div className="jobs-message error-message">Error: {error}</div>}
+        {!loading && !error && jobs.length === 0 && (
+          <div className="jobs-message">No jobs found.</div>
+        )}
 
         {!loading && !error && jobs.length > 0 && (
-         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "24px" }}>
+          <div className="jobs-grid">
             {jobs.slice(0, 16).map((job) => (
               <JobCard key={job._id} job={job} />
             ))}

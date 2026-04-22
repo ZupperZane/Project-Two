@@ -1,0 +1,125 @@
+.companies-section {
+  width: min(1200px, 92%);
+  margin: 2.5rem auto 3rem;
+}
+
+.companies-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.companies-subtitle {
+  color: #64748b;
+  font-size: 0.95rem;
+  margin-bottom: 0.5rem;
+}
+
+.companies-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.companies-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.5rem;
+}
+
+.company-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.company-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
+}
+
+.company-card-top {
+  margin-bottom: 1.25rem;
+}
+
+.company-badge {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #2563eb;
+  background: #dbeafe;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  margin-bottom: 0.9rem;
+}
+
+.company-name {
+  font-size: 1.45rem;
+  line-height: 1.3;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.company-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  margin-bottom: 1.5rem;
+}
+
+.company-info p {
+  margin: 0;
+  color: #334155;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.company-info span {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.2rem;
+}
+
+.company-button {
+  display: block;
+  width: fit-content;
+  margin: 0 auto;
+  text-align: center;
+  background: #2563eb;
+  color: white;
+  text-decoration: none;
+  font-weight: 600;
+  padding: 0.85rem 1.5rem;
+  border-radius: 12px;
+  transition: background 0.2s ease;
+}
+
+.company-button:hover {
+  background: #1d4ed8;
+}
+
+@media (max-width: 768px) {
+  .companies-title {
+    font-size: 2rem;
+  }
+
+  .company-card {
+    padding: 1.2rem;
+  }
+
+  .company-name {
+    font-size: 1.25rem;
+  }
+} 
