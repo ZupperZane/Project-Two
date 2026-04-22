@@ -91,6 +91,22 @@ app.post("/api/messages", async (req, res) => {
   }
 });
 
+app.get("/api/jobs", async (req, res) => {
+  if (!hasMongoConfig()) {
+    res.status(503).json({ error: "MongoDB is not configured." });
+    return;
+  }
+
+  try {
+    const db = await getDb();
+    const jobs = await db.collection("jobs").find({}).toArray();
+    res.json(jobs);
+  } catch (error) {
+    console.error("Failed to fetch jobs:", error);
+    res.status(500).json({ error: "Failed to fetch jobs." });
+  }
+});
+
 app.get("/{*path}", (req, res) => {
   res.sendFile(path.join(__dirname, "dist", "index.html"));
 });
