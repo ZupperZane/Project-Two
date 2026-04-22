@@ -2,6 +2,7 @@ import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import { getDb, hasMongoConfig } from "./mongo.js";
+import { ObjectId } from "mongodb";
 
 const app = express();
 const __filename = fileURLToPath(import.meta.url);
@@ -90,7 +91,7 @@ app.post("/api/messages", async (req, res) => {
     res.status(500).json({ error: "Failed to create message." });
   }
 });
-
+//Get All jobs
 app.get("/api/jobs", async (req, res) => {
   if (!hasMongoConfig()) {
     res.status(503).json({ error: "MongoDB is not configured." });
@@ -104,6 +105,33 @@ app.get("/api/jobs", async (req, res) => {
   } catch (error) {
     console.error("Failed to fetch jobs:", error);
     res.status(500).json({ error: "Failed to fetch jobs." });
+  }
+});
+//Get Job by ID
+app.get("/api/jobs/:id", async (req, res) => {
+  if (!hasMongoConfig()) {
+    return res.status(503).json({ error: "MongoDB is not configured." });
+  }
+
+  try {
+    const db = await getDb();
+
+    if (!ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: "Invalid job id" });
+    }
+
+    const job = await db.collection("jobs").findOne({
+      _id: new ObjectId(req.params.id),
+    });
+
+    if (!job) {
+      return res.status(404).json({ error: "Job not found" });
+    }
+
+    res.json({ ...job, id: job._id.toString(), _id: undefined });
+  } catch (err) {
+    console.error("Failed to fetch job:", err);
+    res.status(500).json({ error: "Server error" });
   }
 });
 

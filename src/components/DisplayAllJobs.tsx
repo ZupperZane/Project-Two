@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 type Job = {
   _id: string;
@@ -21,6 +22,7 @@ function JobCard({ job }: { job: Job }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
+ <Link to={`/jobs/${job._id}`}>
     <article>
       <div>
         <h2>{job.name}</h2>
@@ -50,10 +52,16 @@ function JobCard({ job }: { job: Job }) {
         </div>
       )}
 
-      <button onClick={() => setExpanded((e) => !e)}>
-        {expanded ? "Show less" : "View details"}
-      </button>
+        <button
+          onClick={(e) => {
+            e.preventDefault(); // stops navigation
+            setExpanded((e) => !e);
+          }}
+        >
+          {expanded ? "Show less" : "View details"}
+        </button>
     </article>
+  </Link>
   );
 }
 
