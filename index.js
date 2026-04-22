@@ -107,6 +107,84 @@ app.get("/api/jobs", async (req, res) => {
   }
 });
 
+// creates a jobseeker or job_poster document in MongoDB after Firebase signup
+// _id is the Firebase UID so we can look them up by UID later
+app.post("/api/users", async (req, res) => {
+  const { uid, role, email } = req.body;
+
+  if (!uid || !role || !["jobseeker", "job_poster"].includes(role)) {
+    return res.status(400).json({ error: "uid and valid role are required." });
+  }
+
+  if (!hasMongoConfig()) {
+    return res.status(503).json({ error: "MongoDB is not configured." });
+  }
+
+  try {
+    const db = await getDb();
+    const collection = role === "jobseeker" ? "jobseekers" : "job_posters";
+    const doc = role === "jobseeker"
+      ? { _id: uid, email, resume: null, appliedJobs: [] }
+      : { _id: uid, email, listedJobs: [] };
+
+    await db.collection(collection).insertOne(doc);
+    res.status(201).json({ uid, role });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({ error: "User already exists." }); // duplicate signup
+    }
+    console.error("Failed to create user:", error);
+    res.status(500).json({ error: "Failed to create user." });
+  }
+});
+
+// fetches a user's profile and role by Firebase UID
+// checks jobseekers first, then job_posters — returns 404 if neither found
+app.get("/api/users/:uid", async (req, res) => {
+  const { uid } = req.params;
+
+  if (!hasMongoConfig()) {
+    return res.status(503).json({ error: "MongoDB is not configured." });
+  }
+
+  try {
+    const db = await getDb();
+    const jobseeker = await db.collection("jobseekers").findOne({ _id: uid });
+    if (jobseeker) return res.json({ ...jobseeker, role: "jobseeker" });
+
+    const jobPoster = await db.collection("job_posters").findOne({ _id: uid });
+    if (jobPoster) return res.json({ ...jobPoster, role: "job_poster" });
+
+    res.status(404).json({ error: "User not found." });
+  } catch (error) {
+    console.error("Failed to fetch user:", error);
+    res.status(500).json({ error: "Failed to fetch user." });
+  }
+});
+
+// deletes the user's document from whichever collection they're in, if MongoDB is available
+app.delete("/api/users/:uid", async (req, res) => {
+  const { uid } = req.params;
+
+  if (!hasMongoConfig()) {
+    return res.status(503).json({ error: "MongoDB is not configured." });
+  }
+
+  try {
+    const db = await getDb();
+    const seekerResult = await db.collection("jobseekers").deleteOne({ _id: uid });
+    if (seekerResult.deletedCount > 0) return res.json({ deleted: true });
+
+    const posterResult = await db.collection("job_posters").deleteOne({ _id: uid });
+    if (posterResult.deletedCount > 0) return res.json({ deleted: true });
+
+    res.status(404).json({ error: "User not found." });
+  } catch (error) {
+    console.error("Failed to delete user:", error);
+    res.status(500).json({ error: "Failed to delete user." });
+  }
+});
+
 app.get("/{*path}", (req, res) => {
   res.sendFile(path.join(__dirname, "dist", "index.html"));
 });

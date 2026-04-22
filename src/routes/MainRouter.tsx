@@ -13,6 +13,8 @@ import JobID from "../pages/JobID";
 
 import Login from "../pages/LoginPage";
 import Signup from "../pages/SignUpPage";
+import Dashboard from "../pages/Dashboard";
+import PrivateRoute from "./PrivateRoute";
 
 import DisplayAllJobs from "../components/DisplayAllJobs";
 
@@ -51,6 +53,10 @@ const mainRouter: RouteObject[] = [
       {
         path: "jobs/all",
         element: <DisplayAllJobs />,
+      },
+      {
+        path: "dashboard",
+        element: <PrivateRoute><Dashboard /></PrivateRoute>,
       },
       {
         path: "login",
