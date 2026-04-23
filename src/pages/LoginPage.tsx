@@ -63,48 +63,27 @@ function Login() {
 
             {/* Email */}
             <div style={{ display: "flex", flexDirection: "column", gap: 15, paddingTop: 40}}>
-              <label style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-1)", opacity: 0.6 }}>Email</label>
+              <label className="form-label">Email</label>
               <input
                 type="email"
                 placeholder="user@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                style={{
-                  padding: "10px 13px",
-                  borderRadius: 9,
-                  border: "1.5px solid rgba(255,255,255,0.5)",
-                  background: "rgba(255,255,255,0.55)",
-                  color: "var(--text-1)",
-                  fontSize: "0.95rem",
-                  outline: "none",
-                  width: "100%",
-                  boxSizing: "border-box",
-                }}
+                className="form-input"
               />
             </div>
 
             {/* Password */}
             <div style={{ display: "flex", flexDirection: "column", gap: 10}}>
-              <label style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-1)", opacity: 0.6, paddingTop: 15, paddingBottom: 5}}>Password</label>
+              <label className="form-label">Password</label>
               <input
                 type="password"
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                style={{
-                  padding: "10px 13px",
-                  borderRadius: 9,
-                  border: "1.5px solid rgba(255,255,255,0.5)",
-                  background: "rgba(255,255,255,0.55)",
-                  color: "var(--text-1)",
-                  fontSize: "0.95rem",
-                  outline: "none",
-                  width: "100%",
-                  boxSizing: "border-box",
-                  paddingTop: 5
-                }}
+                className="form-input"
               />
             </div>
 
