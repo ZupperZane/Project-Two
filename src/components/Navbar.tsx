@@ -9,9 +9,9 @@ function NavbarComponent(){
       <nav className="navbar">
 
         <div className="nav-links">
-          <Link to="/Login" className="nav-button">Login</Link>
-          <Link to="/Jobs" className="nav-button">Jobs</Link>
-          <Link to="/Employers" className="nav-button">Employers</Link>
+          <Link to="/login" className="nav-button">Login</Link>
+          <Link to="/jobs" className="nav-button">Jobs</Link>
+          <Link to="/employers" className="nav-button">Employers</Link>
         </div>
 
         <div className="nav-search">

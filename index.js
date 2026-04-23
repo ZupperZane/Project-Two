@@ -91,6 +91,142 @@ app.post("/api/messages", async (req, res) => {
     res.status(500).json({ error: "Failed to create message." });
   }
 });
+
+function mapCompanyDocument(company) {
+  const jobs = Array.isArray(company.jobs) ? company.jobs : [];
+
+  return {
+    _id: company._id.toString(),
+    id: company._id.toString(),
+    companyId: company.companyId ?? "",
+    name: company.name ?? "",
+    slug: company.slug ?? "",
+    industry: company.industry ?? "",
+    institutionType: company.institutionType ?? "",
+    location: company.location ?? "",
+    website: company.website ?? "",
+    description: company.description ?? "",
+    salaryRange: company.salaryRange ?? null,
+    benefitsOffered: Array.isArray(company.benefitsOffered)
+      ? company.benefitsOffered
+      : [],
+    jobs,
+    jobCount: Number.isFinite(company.jobCount) ? company.jobCount : jobs.length,
+  };
+}
+
+function mapJobDocument(job) {
+  const details =
+    job.details && typeof job.details === "object" ? job.details : {};
+  const description =
+    typeof details.description === "string" && details.description.trim()
+      ? details.description
+      : typeof job.description === "string"
+      ? job.description
+      : "";
+
+  return {
+    _id: job._id.toString(),
+    id: job._id.toString(),
+    idCode: job.idCode ?? "",
+    name: job.name ?? "",
+    company: job.company ?? "",
+    salary: Number.isFinite(job.salary) ? job.salary : null,
+    details: {
+      pay: details.pay ?? "",
+      type: details.type ?? "",
+      shift: details.shift ?? "",
+      benefits: Array.isArray(details.benefits) ? details.benefits : [],
+      description,
+    },
+    description,
+  };
+}
+
+app.get("/api/companies", async (req, res) => {
+  if (!hasMongoConfig()) {
+    res.status(503).json({ error: "MongoDB is not configured." });
+    return;
+  }
+
+  try {
+    const db = await getDb();
+    const companies = await db
+      .collection("companies")
+      .find({})
+      .sort({ name: 1 })
+      .toArray();
+
+    res.json(companies.map(mapCompanyDocument));
+  } catch (error) {
+    console.error("Failed to fetch companies:", error);
+    res.status(500).json({ error: "Failed to fetch companies." });
+  }
+});
+
+app.get("/api/companies/:id", async (req, res) => {
+  if (!hasMongoConfig()) {
+    res.status(503).json({ error: "MongoDB is not configured." });
+    return;
+  }
+
+  const identifier = String(req.params.id || "").trim();
+  if (!identifier) {
+    res.status(400).json({ error: "Company identifier is required." });
+    return;
+  }
+
+  try {
+    const db = await getDb();
+    const companiesCollection = db.collection("companies");
+
+    let company = null;
+
+    if (ObjectId.isValid(identifier)) {
+      company = await companiesCollection.findOne({ _id: new ObjectId(identifier) });
+    }
+
+    if (!company) {
+      company = await companiesCollection.findOne({ slug: identifier });
+    }
+
+    if (!company) {
+      company = await companiesCollection.findOne({
+        companyId: { $regex: `^${identifier}$`, $options: "i" },
+      });
+    }
+
+    if (!company) {
+      res.status(404).json({ error: "Company not found." });
+      return;
+    }
+
+    const companyJobs = Array.isArray(company.jobs) ? company.jobs : [];
+    let jobs = [];
+
+    if (companyJobs.length > 0) {
+      jobs = await db
+        .collection("jobs")
+        .find({ idCode: { $in: companyJobs } })
+        .toArray();
+
+      const ordered = new Map(jobs.map((job) => [job.idCode, job]));
+      jobs = companyJobs
+        .map((jobCode) => ordered.get(jobCode))
+        .filter((job) => Boolean(job));
+    } else if (typeof company.name === "string" && company.name.trim()) {
+      jobs = await db.collection("jobs").find({ company: company.name }).toArray();
+    }
+
+    res.json({
+      company: mapCompanyDocument(company),
+      jobs: jobs.map(mapJobDocument),
+    });
+  } catch (error) {
+    console.error("Failed to fetch company detail:", error);
+    res.status(500).json({ error: "Failed to fetch company detail." });
+  }
+});
 //Get All jobs
 app.get("/api/jobs", async (req, res) => {
   if (!hasMongoConfig()) {
