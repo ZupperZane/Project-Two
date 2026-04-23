@@ -1,6 +1,6 @@
 import { Navigate } from "react-router-dom";
 import type { RouteObject } from "react-router-dom";
-import Root from "../layout/Root";
+import Root from "../layout/root";
 import { ROUTES } from "../utils/constants";
 import Home from "../pages/Home";
 import ErrorPage from "../pages/ErrorPage";
