@@ -12,7 +12,7 @@ function ErrorPage() {
 
   return (
     <>
-      <div className="page page-center">
+      <div className="page error-page">
         <h1 className="error-code">{status ?? "Err"}</h1>
         <div className="error-divider" />
         <p className="error-title">{message}</p>
