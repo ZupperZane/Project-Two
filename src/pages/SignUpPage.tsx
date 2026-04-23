@@ -7,12 +7,12 @@ import NavbarComponent from "../components/Navbar";
 import type { UserRole } from "../contexts/AuthContext";
 
 function Signup() {
-  const { createUser, updateUserProfile, firebaseConfigured } = useAuth();
+  const { createUser, updateUserProfile, bootstrapUserProfile, firebaseConfigured } = useAuth();
   const navigate = useNavigate();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<Exclude<UserRole, null>>("jobseeker");
+  const [role, setRole] = useState<Exclude<UserRole, null>>("job_seeker");
   const [error, setError] = useState<string>("");
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -20,21 +20,13 @@ function Signup() {
     setError("");
 
     try {
-      const credential = await createUser(email, password);
+      await createUser(email, password);
 
       if (displayName.trim()) {
         await updateUserProfile({ displayName: displayName.trim() });
       }
 
-      try {
-        await fetch("/api/users", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ uid: credential.user.uid, role, email }),
-        });
-      } catch {
-        // MongoDB may not be configured — continue anyway
-      }
+      await bootstrapUserProfile(role);
 
       navigate(ROUTES.DASHBOARD, { replace: true });
     } catch (err) {
@@ -79,12 +71,24 @@ function Signup() {
         />
         <div>
           <label>
-            <input type="radio" name="role" value="jobseeker" checked={role === "jobseeker"} onChange={() => setRole("jobseeker")} />
+            <input
+              type="radio"
+              name="role"
+              value="job_seeker"
+              checked={role === "job_seeker"}
+              onChange={() => setRole("job_seeker")}
+            />
             {" "}Job Seeker
           </label>
           <label style={{ marginLeft: "1rem" }}>
-            <input type="radio" name="role" value="job_poster" checked={role === "job_poster"} onChange={() => setRole("job_poster")} />
-            {" "}Job Poster
+            <input
+              type="radio"
+              name="role"
+              value="employer"
+              checked={role === "employer"}
+              onChange={() => setRole("employer")}
+            />
+            {" "}Employer
           </label>
         </div>
         <button type="submit">Create account</button>

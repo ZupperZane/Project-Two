@@ -1,74 +1,137 @@
-import { useState, useEffect } from 'react';
-import { createUserWithEmailAndPassword, onAuthStateChanged, sendPasswordResetEmail, signInWithEmailAndPassword } from 'firebase/auth';
+import { useState, useEffect, useCallback } from "react";
+import {
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut,
+  updateProfile,
+  deleteUser,
+} from "firebase/auth";
 import type { User } from "firebase/auth";
 import { auth } from "../firebase/firebase.config";
 import { AuthContext } from "./AuthContext";
 import type { UserRole } from "./AuthContext";
-import { GoogleAuthProvider, signInWithPopup, signOut, updateProfile, deleteUser } from 'firebase/auth';
+
+type MeResponse = {
+  user?: {
+    role?: UserRole;
+  };
+};
 
 const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-    const [user, setUser] = useState<User | null>(null);
-    const [role, setRole] = useState<UserRole>(null); // fetched from MongoDB after login
-    const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [role, setRole] = useState<UserRole>(null);
+  const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth!, async (currentUser) => {
-            setUser(currentUser);
-
-            if (currentUser) {
-                try {
-                    // look up the user's role in MongoDB using their Firebase UID
-                    const res = await fetch(`/api/users/${currentUser.uid}`);
-                    if (res.ok) {
-                        const data = await res.json();
-                        setRole(data.role ?? null);
-                    } else {
-                        setRole(null); // 404 or 503 — MongoDB missing or user doc not created yet
-                    }
-                } catch {
-                    setRole(null); // network error — degrade gracefully
-                }
-            } else {
-                setRole(null); // logged out
-            }
-
-            setLoading(false);
-        });
-
-        return unsubscribe;
-    }, []);
-
-    const value = {
-        user,
-        role,
-        loading,
-        firebaseConfigured: Boolean(auth),
-        createUser: (email: string, password: string) => createUserWithEmailAndPassword(auth!, email, password),
-        signInUser: (email: string, password: string) => signInWithEmailAndPassword(auth!, email, password),
-        signOutUser: () => signOut(auth!),
-        resetUserPassword: (email: string) => sendPasswordResetEmail(auth!, email),
-        signInWithGoogle: () => signInWithPopup(auth!, new GoogleAuthProvider()),
-        updateUserProfile: (profile: { displayName?: string; photoURL?: string}) => updateProfile(auth!.currentUser!, profile),
-        // deletes MongoDB doc (if found) then deletes the Firebase account
-        deleteAccount: async () => {
-            const uid = auth!.currentUser!.uid;
-            try {
-                await fetch(`/api/users/${uid}`, { method: "DELETE" });
-            } catch {
-                // MongoDB unavailable — continue to Firebase deletion anyway
-            }
-            await deleteUser(auth!.currentUser!);
-        },
+  const getAuthHeaders = useCallback(async (currentUser: User) => {
+    const idToken = await currentUser.getIdToken();
+    return {
+      Authorization: `Bearer ${idToken}`,
+      "Content-Type": "application/json",
     };
+  }, []);
 
-    //This gives us wrappers to handle auth actions with firebase and populates state with variables that buttons can use
+  const fetchMyRole = useCallback(async (currentUser: User) => {
+    const headers = await getAuthHeaders(currentUser);
+    const response = await fetch("/api/users/me", {
+      method: "GET",
+      headers,
+    });
 
-    return (
-        <AuthContext.Provider value={value}>
-            {children}
-        </AuthContext.Provider>
-    );
+    if (response.status === 404) {
+      return null;
+    }
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch user profile: HTTP ${response.status}`);
+    }
+
+    const data = (await response.json()) as MeResponse;
+    return data.user?.role ?? null;
+  }, [getAuthHeaders]);
+
+  const bootstrapUserProfile = useCallback(async (requestedRole: Exclude<UserRole, null>) => {
+    if (!auth?.currentUser) {
+      throw new Error("No authenticated user.");
+    }
+
+    const headers = await getAuthHeaders(auth.currentUser);
+    const response = await fetch("/api/users/bootstrap", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ role: requestedRole }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => null);
+      throw new Error(data?.error || `Bootstrap failed: HTTP ${response.status}`);
+    }
+
+    const data = (await response.json()) as MeResponse;
+    setRole(data.user?.role ?? null);
+  }, [getAuthHeaders]);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth!, async (currentUser) => {
+      setUser(currentUser);
+
+      if (!currentUser) {
+        setRole(null);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        let resolvedRole = await fetchMyRole(currentUser);
+
+        if (!resolvedRole) {
+          await bootstrapUserProfile("job_seeker");
+          resolvedRole = await fetchMyRole(currentUser);
+        }
+
+        setRole(resolvedRole ?? null);
+      } catch {
+        setRole(null);
+      }
+
+      setLoading(false);
+    });
+
+    return unsubscribe;
+  }, [bootstrapUserProfile, fetchMyRole]);
+
+  const value = {
+    user,
+    role,
+    loading,
+    firebaseConfigured: Boolean(auth),
+    createUser: (email: string, password: string) =>
+      createUserWithEmailAndPassword(auth!, email, password),
+    signInUser: (email: string, password: string) =>
+      signInWithEmailAndPassword(auth!, email, password),
+    signOutUser: () => signOut(auth!),
+    resetUserPassword: (email: string) => sendPasswordResetEmail(auth!, email),
+    signInWithGoogle: () => signInWithPopup(auth!, new GoogleAuthProvider()),
+    bootstrapUserProfile,
+    updateUserProfile: (profile: { displayName?: string; photoURL?: string }) =>
+      updateProfile(auth!.currentUser!, profile),
+    deleteAccount: async () => {
+      if (auth?.currentUser) {
+        try {
+          const headers = await getAuthHeaders(auth.currentUser);
+          await fetch("/api/users/me", { method: "DELETE", headers });
+        } catch {
+          // Continue with Firebase account deletion even if Mongo cleanup fails.
+        }
+        await deleteUser(auth.currentUser);
+      }
+    },
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export default AuthProvider;
-

@@ -17,6 +17,9 @@ type Company = {
     max?: number;
   } | null;
   benefitsOffered: string[];
+  categoriesHiringFor?: string[];
+  departmentsHiringFor?: string[];
+  recruiterIds?: string[];
   jobs: string[];
   jobCount: number;
 };
@@ -25,8 +28,15 @@ type Job = {
   _id: string;
   idCode: string;
   name: string;
+  jobTitle?: string;
   company: string;
+  institutionName?: string;
   salary: number | null;
+  category?: string;
+  department?: string;
+  location?: string;
+  applicationDeadline?: string;
+  employmentType?: string;
   details?: {
     pay?: string;
     type?: string;
@@ -90,6 +100,15 @@ function EmployerID() {
             </p>
           )}
           {data.company.description && <p>{data.company.description}</p>}
+          {data.company.categoriesHiringFor && data.company.categoriesHiringFor.length > 0 && (
+            <p>Hiring categories: {data.company.categoriesHiringFor.join(", ")}</p>
+          )}
+          {data.company.departmentsHiringFor && data.company.departmentsHiringFor.length > 0 && (
+            <p>Hiring departments: {data.company.departmentsHiringFor.join(", ")}</p>
+          )}
+          {data.company.recruiterIds && data.company.recruiterIds.length > 0 && (
+            <p>{data.company.recruiterIds.length} recruiter account(s)</p>
+          )}
 
           {data.company.salaryRange &&
           Number.isFinite(data.company.salaryRange.min) &&
@@ -117,12 +136,20 @@ function EmployerID() {
             {data.jobs.length > 0 && (
               <ul>
                 {data.jobs.map((job) => (
-                  <li key={job._id}>
-                    <Link to={`/jobs/${job._id}`}>
-                      {job.name} ({job.idCode})
-                    </Link>
-                    {job.salary !== null ? ` - $${job.salary.toLocaleString()}` : ""}
-                    {job.details?.type ? ` - ${job.details.type}` : ""}
+                  <li key={job._id} style={{ marginBottom: "12px" }}>
+                    <Link to={`/jobs/${job._id}`}>{job.jobTitle || job.name}</Link>
+                    <div><strong>Job ID:</strong> {job.idCode}</div>
+                    <div><strong>Type:</strong> {job.employmentType || job.details?.type || "N/A"}</div>
+                    <div><strong>Location:</strong> {job.location || "N/A"}</div>
+                    <div>
+                      <strong>Category / Department:</strong>{" "}
+                      {[job.category, job.department].filter(Boolean).join(" / ") || "N/A"}
+                    </div>
+                    <div>
+                      <strong>Salary:</strong>{" "}
+                      {job.salary !== null ? `$${job.salary.toLocaleString()}` : "N/A"}
+                    </div>
+                    <div><strong>Apply by:</strong> {job.applicationDeadline || "N/A"}</div>
                   </li>
                 ))}
               </ul>

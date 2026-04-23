@@ -12,6 +12,14 @@ type Company = {
   location: string;
   website: string;
   description: string;
+  categoriesHiringFor?: string[];
+  departmentsHiringFor?: string[];
+  recruiterIds?: string[];
+  salaryRangeSummary?: {
+    min?: number;
+    max?: number;
+    currency?: string;
+  } | null;
   jobCount: number;
 };
 
@@ -63,6 +71,9 @@ function DisplayAllCompanies() {
               <h2>{company.name}</h2>
               <p>{company.industry || company.institutionType || "Industry not listed"}</p>
               <p>{company.location || "Location not listed"}</p>
+              {company.recruiterIds && company.recruiterIds.length > 0 && (
+                <p>{company.recruiterIds.length} recruiter account(s)</p>
+              )}
               <p>{company.jobCount ?? 0} open roles</p>
             </Link>
           ))}

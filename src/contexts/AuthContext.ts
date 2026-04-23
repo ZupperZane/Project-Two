@@ -1,8 +1,7 @@
 import { createContext } from "react";
 import type { User, UserCredential } from "firebase/auth";
 
-// The two account types, plus null when role is unknown (e.g. MongoDB unavailable)
-export type UserRole = "jobseeker" | "job_poster" | null;
+export type UserRole = "admin" | "employer" | "job_seeker" | null;
 
 export interface AuthContextValue {
   user: User | null;
@@ -13,6 +12,7 @@ export interface AuthContextValue {
   signInUser: (email: string, password: string) => Promise<UserCredential>;
   resetUserPassword: (email: string) => Promise<void>;
   signInWithGoogle: () => Promise<UserCredential>;
+  bootstrapUserProfile: (role: Exclude<UserRole, null>) => Promise<void>;
   signOutUser: () => Promise<void>;
   deleteAccount: () => Promise<void>;
   updateUserProfile: (profile: {
