@@ -13,6 +13,12 @@ import JobID from "../pages/JobID";
 
 import Login from "../pages/LoginPage";
 import Signup from "../pages/SignUpPage";
+import Dashboard from "../pages/Dashboard";
+import PrivateRoute from "./PrivateRoute";
+
+import DisplayAllJobs from "../components/DisplayAllJobs";
+
+
 
 const mainRouter: RouteObject[] = [
   {
@@ -24,32 +30,42 @@ const mainRouter: RouteObject[] = [
         index: true,
         element: <Navigate to="/home" replace />,
       },
-            {
-        path: "Home",
+      {
+        path: "home",
         element: <Home />,
       },
       {
-        path: "Employers",
+        path: "employers",
         element: <Employers />,
       },
-        {
-        path: "Employer",
+      {
+        path: "employer/:id",
         element: <Employer />,
       },
-        {
-        path: "Jobs",
+      {
+        path: "jobs",
         element: <Jobs />,
       },
-        {
-        path: "JobID",
+      {
+        path: "jobs/:id",
         element: <JobID />,
-      },{
-        path: "Login",
-        element:<Login/>
-      },{
+      },
+      {
+        path: "jobs/all",
+        element: <DisplayAllJobs />,
+      },
+      {
+        path: "dashboard",
+        element: <PrivateRoute><Dashboard /></PrivateRoute>,
+      },
+      {
+        path: "login",
+        element: <Login />,
+      },
+      {
         path: "signup",
-        element: <Signup/>
-      }
+        element: <Signup />,
+      },
     ],
   },
 ];
