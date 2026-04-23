@@ -12,7 +12,6 @@ function ErrorPage() {
 
   return (
     <>
-      <style>{`#root { width: 100% !important; border: none !important; margin: 0 !important; }`}</style>
       <div className="page page-center">
         <h1 className="error-code">{status ?? "Err"}</h1>
         <div className="error-divider" />
