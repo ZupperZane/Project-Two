@@ -162,7 +162,7 @@ function CreatePostPage() {
           <div className="section-divider">
             <label className="form-label">Job Description</label>
             <textarea
-              placeholder="Describe the role, responsibilities, and requirements..."
+              placeholder="Job Description goes here..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={5}
