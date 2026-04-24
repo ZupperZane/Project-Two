@@ -94,7 +94,7 @@
 
 .company-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 24px;
 }
 
@@ -106,9 +106,23 @@
     box-shadow: var(--text-1);
 }
 
+.job-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+}
+
 .job-card {
-    background: var(--secondary);
+    background: var(--secondary1);
     border-radius: 12px;
+    border: 1px solid var(--secondary2);
     padding: 24px;
-    box-shadow: var(--text-1);
+}
+
+.section-divider {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-top: 20px;
+    border-top: 2px solid var(--secondary2);
 }

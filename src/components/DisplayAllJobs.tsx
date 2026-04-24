@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import "../css/Page.css";
 
 type Job = {
   _id: string;
@@ -52,7 +53,7 @@ function formatSalary(job: Job) {
     return `$${job.salary.toLocaleString()}/year`;
   }
 
-  return "Salary not listed";
+  return null;
 }
 
 function JobCard({ job }: { job: Job }) {
@@ -64,50 +65,80 @@ function JobCard({ job }: { job: Job }) {
   const description = job.jobDescription || job.details?.description;
   const benefits = job.benefits?.length ? job.benefits : (job.details?.benefits ?? []);
   const categoryLine = [job.category, job.department].filter(Boolean).join(" • ");
+  const salary = formatSalary(job);
 
   return (
-    <Link to={`/jobs/${job._id}`}>
-      <article style={{ border: "1px solid #ddd", borderRadius: "10px", padding: "14px" }}>
-        <div>
-          <h2>{title}</h2>
-          <p>{companyName}</p>
-          {job.location && <p>{job.location}</p>}
-          {categoryLine && <p>{categoryLine}</p>}
-          <p>{employmentType ?? "Type not listed"}</p>
-        </div>
+    <div className="job-card">
+      <div className="text">
+        <h2>{title}</h2>
 
-        <div>
-          <p>{formatSalary(job)}</p>
-          {shift && <p>{shift}</p>}
-          <p>{job.idCode}</p>
-        </div>
+        {/* Company */}
+        <p style={{ color: "#00637D", fontWeight: 500 }}>{companyName}</p>
 
-        {description && <p>{description}</p>}
-        {job.applicationDeadline && <p>Apply by: {job.applicationDeadline}</p>}
+        {/* Location */}
+        {job.location && <p>{job.location}</p>}
 
+        {/* Category / Department */}
+        {categoryLine && <p>{categoryLine}</p>}
+
+        {/* Employment Type */}
+        {employmentType && <p>{employmentType}</p>}
+
+        {/* Shift */}
+        {shift && <p>{shift}</p>}
+
+        {/* Description */}
+        {description && <p style={{ paddingBottom: "20px" }}>{description}</p>}
+
+        {/* Benefits */}
         {benefits.length > 0 && (
-          <div>
-            {benefits
-              .slice(0, expanded ? undefined : 3)
-              .map((b) => (
-                <span key={b}>{b}</span>
-              ))}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, paddingBottom: 12 }}>
+            {benefits.slice(0, expanded ? undefined : 3).map((b) => (
+              <div key={b} style={{ fontSize: "0.75rem", fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: "var(--secondary2)", color: "var(--text-1)" }}>
+                {b}
+              </div>
+            ))}
+            {/* Displays how many more benefits */}
             {!expanded && benefits.length > 3 && (
-              <span>+{benefits.length - 3} more</span>
+              <div style={{ fontSize: "0.75rem", fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: "var(--secondary2)", color: "var(--text-1)", opacity: 0.6 }}>
+                +{benefits.length - 3} more
+              </div>
             )}
           </div>
         )}
 
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            setExpanded((current) => !current);
-          }}
-        >
-          {expanded ? "Show less" : "View details"}
-        </button>
-      </article>
-    </Link>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 20, borderTop: "2px solid var(--text-1)" }}>
+          <div className="text" style={{ display: "flex", flexDirection: "column" }}>
+
+            {/* Salary */}
+            {salary && <p style={{ margin: 0 }}>{salary}</p>}
+
+            {/* Deadline */}
+            {job.applicationDeadline && (
+              <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--neg-secondary)", fontWeight: 600 }}>
+                Apply by: {job.applicationDeadline}
+              </p>
+            )}
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>
+            <Link to={`/jobs/${job._id}`}>
+              <button className="btn" style={{ padding: "12px 20px", color: "var(--text-2)" }}>
+                Apply
+              </button>
+            </Link>
+            {benefits.length > 3 && (
+              <button
+                onClick={() => setExpanded((current) => !current)}
+                style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.82rem", fontWeight: 600, color: "var(--button-mid)" }}
+              >
+                {expanded ? "Show less" : "Show all benefits"}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -133,25 +164,37 @@ function DisplayAllJobs() {
   }, []);
 
   return (
-    <div>
-      <div>
-        <h1>Job listings</h1>
-        <p>{jobs.length} position{jobs.length !== 1 ? "s" : ""} available</p>
+    <div className="page">
+      <div className="text">
+        <h1>Job Listings</h1>
+        <p style={{ paddingBottom: "40px" }}>{jobs.length} position{jobs.length !== 1 ? "s" : ""} available</p>
       </div>
 
-      <div>
-        {loading && <div>Loading jobs…</div>}
-        {!loading && error && <div>Error: {error}</div>}
-        {!loading && !error && jobs.length === 0 && <div>No jobs found.</div>}
+      {loading && (
+        <div className="page-center">
+          <p style={{ color: "var(--button-mid)", fontSize: "2.5rem", fontWeight: 500 }}>Loading jobs. Please wait...</p>
+        </div>
+      )}
 
-        {!loading && !error && jobs.length > 0 && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "24px" }}>
-            {jobs.slice(0, 16).map((job) => (
-              <JobCard key={job._id} job={job} />
-            ))}
-          </div>
-        )}
-      </div>
+      {!loading && error && (
+        <div className="page-center">
+          <p style={{ color: "var(--neg-secondary)", fontSize: "2.5rem", fontWeight: 500 }}>Error: {error}</p>
+        </div>
+      )}
+
+      {!loading && !error && jobs.length === 0 && (
+        <div className="page-center">
+          <p style={{ color: "var(--button-mid)", fontSize: "2.5rem", fontWeight: 500 }}>No jobs found</p>
+        </div>
+      )}
+
+      {!loading && !error && jobs.length > 0 && (
+        <div className="job-grid">
+          {jobs.slice(0, 16).map((job) => (
+            <JobCard key={job._id} job={job} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

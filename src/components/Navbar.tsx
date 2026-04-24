@@ -9,7 +9,7 @@ function NavbarComponent(){
 
   return (
     <div className="w-full flex flex-col items-center gap-10">
-      <nav className="navbar">
+      <nav className="navbar" style={{background: "#66A1DE"}}>
         <div className="nav-links">
           <Link to="/home" className="nav-button">Home</Link>
           <Link to="/jobs" className="nav-button">Jobs</Link>

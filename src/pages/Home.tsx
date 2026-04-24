@@ -12,7 +12,7 @@ function Home() {
       <NavbarComponent />
       <div className="page-center" style={{ paddingTop: 80, gap: 48 }}>
         <div style={{ textAlign: "center" }}>
-          <h1 style={{ color: "var(--text-1)", margin: 0 }}>Find Your Next Opportunity</h1>
+          <h1 style={{ color: "var(--text-1)", margin: 0, paddingBottom: 30 }}>Find Your Next Opportunity</h1>
           <p style={{ color: "var(--text-1)", opacity: 0.6, marginTop: 12, fontSize: "1.05rem" }}>
             Search thousands of jobs and employers in one place.
           </p>

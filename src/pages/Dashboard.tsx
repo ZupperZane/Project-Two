@@ -38,7 +38,7 @@ function Dashboard() {
 
           <div>
             <h1 style={{ margin: 0, color: "var(--text-1)" }}>Dashboard</h1>
-            <p style={{ margin: "6px 0 0", color: "var(--text-1)", opacity: 0.6, fontSize: "0.9rem" }}>
+            <p style={{ margin: "6px 0 0", color: "var(--text-1)", opacity: 0.6, fontSize: "0.9rem", paddingTop: 40}}>
               {user?.email} · {role ?? "..."}
             </p>
           </div>

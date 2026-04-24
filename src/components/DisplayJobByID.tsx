@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import useAuth from "../hooks/useAuth";
+import "../css/Page.css";
 
 type Job = {
   _id: string;
@@ -105,60 +106,75 @@ function JobDetails({ job }: { job: Job }) {
   const shift = job.shift || job.details?.shift || "Not listed";
   const benefits = job.benefits?.length ? job.benefits : (job.details?.benefits ?? []);
   const qualifications = job.requiredQualifications ?? [];
+  const salary = formatSalary(job);
 
   return (
-    <article>
-      <h1>{title}</h1>
-      <p>{companyName}</p>
-      <QuickApply jobId={job._id} />
+    <div style={{ background: "var(--secondary1)", borderRadius: 16, padding: 36, display: "flex", flexDirection: "column", gap: 20 }}>
 
-      <div>
-        <p><strong>Job ID:</strong> {job.idCode || "N/A"}</p>
-        <p><strong>Company ID:</strong> {job.companyId || "N/A"}</p>
-        <p><strong>Category:</strong> {job.category || "N/A"}</p>
-        <p><strong>Department:</strong> {job.department || "N/A"}</p>
-        <p><strong>Location:</strong> {job.location || "N/A"}</p>
-        <p><strong>Employment Type:</strong> {employmentType}</p>
-        <p><strong>Shift:</strong> {shift}</p>
-        <p><strong>Salary:</strong> {formatSalary(job)}</p>
-        <p><strong>Apply By:</strong> {job.applicationDeadline || "N/A"}</p>
-        <p><strong>Expected Start:</strong> {job.expectedStartDate || "N/A"}</p>
-        <p><strong>Recruiter ID:</strong> {job.recruiterId || "N/A"}</p>
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, paddingBottom: 20, borderBottom: "2px solid var(--secondary2)" }}>
+        <div className="text">
+          <h1>{title}</h1>
+          <p style={{ color: "#00637D", fontWeight: 500, fontSize: "1.25rem" }}>{companyName}</p>
+        </div>
+        <QuickApply jobId={job._id} />
       </div>
 
-      <div>
-        <h2>Description</h2>
-        <p>{description}</p>
+      {/* Details list */}
+      <div className="text" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {job.location && <p><strong>Location:</strong> {job.location}</p>}
+        {employmentType && <p><strong>Employment Type:</strong> {employmentType}</p>}
+        {shift && <p><strong>Shift:</strong> {shift}</p>}
+        {salary && <p><strong>Salary:</strong> {salary}</p>}
+        {job.category && <p><strong>Category:</strong> {job.category}</p>}
+        {job.department && <p><strong>Department:</strong> {job.department}</p>}
+        {job.applicationDeadline && <p><strong>Apply By:</strong> {job.applicationDeadline}</p>}
+        {job.expectedStartDate && <p><strong>Expected Start:</strong> {job.expectedStartDate}</p>}
+        {job.idCode && <p><strong>Job ID:</strong> {job.idCode}</p>}
       </div>
 
+      {/* Description */}
+      <div style={{ paddingTop: 8, borderTop: "2px solid var(--secondary2)" }}>
+        <div className="text">
+          <h2>Description</h2>
+          <p>{description}</p>
+        </div>
+      </div>
+
+      {/* Qualifications */}
       {qualifications.length > 0 && (
-        <div>
-          <h2>Required Qualifications</h2>
-          <ul>
-            {qualifications.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
+        <div style={{ paddingTop: 8, borderTop: "2px solid var(--secondary2)" }}>
+          <div className="text">
+            <h2>Required Qualifications</h2>
+            <ul style={{ paddingLeft: 20, display: "flex", flexDirection: "column", gap: 4 }}>
+              {qualifications.map((item) => (
+                <li key={item}><p style={{ margin: 0 }}>{item}</p></li>
+              ))}
+            </ul>
+          </div>
         </div>
       )}
 
+      {/* Benefits */}
       {benefits.length > 0 && (
-        <div>
-          <h2>Benefits</h2>
-          <ul>
-            {benefits.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
+        <div style={{ paddingTop: 8, borderTop: "2px solid var(--secondary2)" }}>
+          <div className="text">
+            <h2>Benefits</h2>
+            <ul style={{ paddingLeft: 20, display: "flex", flexDirection: "column", gap: 4 }}>
+              {benefits.map((item) => (
+                <li key={item}><p style={{ margin: 0 }}>{item}</p></li>
+              ))}
+            </ul>
+          </div>
         </div>
       )}
-    </article>
+
+    </div>
   );
 }
 
 export default function SingleJobPage() {
   const { id } = useParams();
-
   const [job, setJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -180,9 +196,24 @@ export default function SingleJobPage() {
       });
   }, [id]);
 
-  if (loading) return <p>Loading job...</p>;
-  if (error) return <p>Error: {error}</p>;
-  if (!job) return <p>No job found</p>;
-
-  return <JobDetails job={job} />;
+  return (
+    <div className="page">
+      {loading && (
+        <div className="page-center">
+          <p style={{ color: "var(--button-mid)", fontSize: "2.5rem", fontWeight: 500 }}>Loading job...</p>
+        </div>
+      )}
+      {!loading && error && (
+        <div className="page-center">
+          <p style={{ color: "var(--neg-secondary)", fontSize: "2.5rem", fontWeight: 500 }}>Error: {error}</p>
+        </div>
+      )}
+      {!loading && !error && !job && (
+        <div className="page-center">
+          <p style={{ color: "var(--button-mid)", fontSize: "2.5rem", fontWeight: 500 }}>No job found</p>
+        </div>
+      )}
+      {!loading && !error && job && <JobDetails job={job} />}
+    </div>
+  );
 }
