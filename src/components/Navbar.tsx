@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import useAuth from "../hooks/useAuth";
 import "../css/Navbar.css";
@@ -8,11 +8,17 @@ function NavbarComponent(){
 const [text,setText] = useState("");
 const [searchtype,setSearchtype] = useState<"Employer"|"Job">("Job");
 const { user, signOutUser } = useAuth();
+const navigate = useNavigate();
+
+  const handleSearch = () => {
+    if (!text.trim()) return;
+    const type = searchtype === "Job" ? "jobs" : "employers";
+    navigate(`/search?type=${type}&q=${encodeURIComponent(text.trim())}`);
+  };
+
     return(
-        <div className="w-full flex flex-col items-center gap-10">
-
+    <div className="w-full flex flex-col items-center gap-10">
       <nav className="navbar">
-
         <div className="nav-links">
           <Link to="/home" className="nav-button">Home</Link>
           <Link to="/jobs" className="nav-button">Jobs</Link>
@@ -27,19 +33,10 @@ const { user, signOutUser } = useAuth();
           )}
         </div>
 
-        <div
-          style={{
-            alignItems: "center",
-            overflow: "hidden",
-          }}
-        >
-          {/**May later be a drop down for functionality sake this will work */}
+        <div style={{ alignItems: "center", overflow: "hidden" }}>
           <div>
             {(["Job", "Employer"] as const).map((type) => (
-              <button
-                key={type}
-                onClick={() => setSearchtype(type)}
-              >
+              <button key={type} onClick={() => setSearchtype(type)}>
                 {type}
               </button>
             ))}
@@ -49,16 +46,13 @@ const { user, signOutUser } = useAuth();
             type="text"
             value={text}
             onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
             placeholder={`Search ${searchtype}s...`}
           />
 
-          <button>
-            Search
-          </button>
+          <button onClick={handleSearch}>Search</button>
         </div>
-
       </nav>
-
     </div>
     )
 }

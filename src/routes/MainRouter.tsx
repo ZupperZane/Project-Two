@@ -13,11 +13,12 @@ import JobID from "../pages/JobID";
 
 import Login from "../pages/LoginPage";
 import Signup from "../pages/SignUpPage";
+
 import Dashboard from "../pages/Dashboard";
 import PrivateRoute from "./PrivateRoute";
 
 import DisplayAllJobs from "../components/DisplayAllJobs";
-
+import SearchPage from "../pages/SearchPage";
 
 
 const mainRouter: RouteObject[] = [
@@ -65,6 +66,10 @@ const mainRouter: RouteObject[] = [
       {
         path: "signup",
         element: <Signup />,
+      },
+            {
+        path: "search",
+        element: <SearchPage />,
       },
     ],
   },
