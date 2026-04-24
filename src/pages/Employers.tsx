@@ -3,7 +3,7 @@ import DisplayAllCompanies from "../components/DisplayAlllCompanies";
 
 function Employers() {
   return (
-    <div>
+    <div className="page">
       <NavbarComponent />
       <DisplayAllCompanies />
     </div>

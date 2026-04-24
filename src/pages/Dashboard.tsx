@@ -1,6 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import useAuth from "../hooks/useAuth";
 import { ROUTES } from "../utils/constants";
+import NavbarComponent from "../components/Navbar";
+import "../css/Page.css";
 
 function Dashboard() {
   const { user, role, signOutUser, deleteAccount } = useAuth();
@@ -13,12 +15,15 @@ function Dashboard() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-      <h1 className="text-3xl font-bold">Dashboard</h1>
-      <p>Logged in as: {user?.email}</p>
-      <p>Role: {role ?? "unknown (MongoDB may not be connected)"}</p>
-      <button className="btn btn-outline" onClick={signOutUser}>Sign out</button>
-      <button className="btn btn-error btn-outline" onClick={handleDelete}>Delete account</button>
+    <div className="page">
+      <NavbarComponent />
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <p>Logged in as: {user?.email}</p>
+        <p>Role: {role ?? "unknown (MongoDB may not be connected)"}</p>
+        <button className="btn btn-outline" onClick={signOutUser}>Sign out</button>
+        <button className="btn btn-error btn-outline" onClick={handleDelete}>Delete account</button>
+      </div>
     </div>
   );
 }
