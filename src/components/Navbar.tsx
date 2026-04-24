@@ -5,7 +5,7 @@ import "../css/Navbar.css";
 import "../css/index.css"
 
 function NavbarComponent(){
-  const { user, signOutUser } = useAuth();
+  const { user, role, signOutUser } = useAuth();
 
   return (
     <div className="w-full flex flex-col items-center gap-10">
@@ -14,6 +14,9 @@ function NavbarComponent(){
           <Link to="/home" className="nav-button">Home</Link>
           <Link to="/jobs" className="nav-button">Jobs</Link>
           <Link to="/employers" className="nav-button">Employers</Link>
+          {role === "employer" && (
+            <Link to="/jobs/new" className="nav-button">Post Job</Link>
+          )}
           {user ? (
             <>
               <Link to="/dashboard" className="nav-button">Dashboard</Link>

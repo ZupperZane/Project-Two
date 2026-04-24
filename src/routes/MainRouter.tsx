@@ -54,6 +54,10 @@ const mainRouter: RouteObject[] = [
         element: <JobID />,
       },
       {
+        path: "jobs/new",
+        element: <PrivateRoute><CreatePostPage/></PrivateRoute>,
+      },
+      {
         path: "jobs/all",
         element: <DisplayAllJobs />,
       },
@@ -67,7 +71,7 @@ const mainRouter: RouteObject[] = [
       },
       {
         path: "createPost",
-        element:<CreatePostPage/>
+        element:<Navigate to="/jobs/new" replace />
       },
       {
         path: "signup",

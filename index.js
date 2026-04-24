@@ -1360,6 +1360,74 @@ app.post(
   }
 );
 
+app.post(
+  "/api/employer/select-company",
+  authenticateRequest,
+  loadCurrentUser,
+  requireRoles(USER_ROLES.ADMIN, USER_ROLES.EMPLOYER),
+  async (req, res) => {
+    try {
+      const uid = req.authUser.uid;
+      const identifier = toSafeString(req.body?.companyId ?? req.body?.identifier, 120);
+      const name = toSafeString(req.body?.name, 140);
+
+      if (!identifier && !name) {
+        res.status(400).json({ error: "companyId (or identifier) or name is required." });
+        return;
+      }
+
+      const companyQuery = [];
+
+      if (identifier) {
+        if (ObjectId.isValid(identifier)) {
+          companyQuery.push({ _id: new ObjectId(identifier) });
+        }
+        companyQuery.push({ companyId: { $regex: `^${escapeRegex(identifier)}$`, $options: "i" } });
+        companyQuery.push({ slug: identifier });
+      }
+
+      if (name) {
+        companyQuery.push({ name: { $regex: `^${escapeRegex(name)}$`, $options: "i" } });
+      }
+
+      const company = await req.db.collection("companies").findOne({
+        $or: companyQuery,
+      });
+
+      if (!company) {
+        res.status(404).json({ error: "Institution not found." });
+        return;
+      }
+
+      await req.db.collection("employer_profiles").updateOne(
+        { _id: uid },
+        {
+          $set: {
+            userId: uid,
+            companyId: toSafeString(company.companyId, 60) ?? "",
+            companyName: toSafeString(company.name, 140) ?? "",
+            companySlug: toSafeString(company.slug, 160) ?? "",
+            companyDescription: toSafeString(company.description, 4000) ?? "",
+            industry: toSafeString(company.industry, 120) ?? "",
+            location: toSafeString(company.location, 120) ?? "",
+            website: toSafeString(company.website, 300) ?? "",
+            updatedAt: getNow(),
+          },
+          $setOnInsert: {
+            createdAt: getNow(),
+          },
+        },
+        { upsert: true }
+      );
+
+      res.json(mapCompanyDocument(company));
+    } catch (error) {
+      console.error("Failed to select employer institution:", error);
+      res.status(500).json({ error: "Failed to select employer institution." });
+    }
+  }
+);
+
 app.get(
   "/api/employer/jobs",
   authenticateRequest,

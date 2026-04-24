@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import useAuth from "../hooks/useAuth";
 import "../css/Page.css";
 
 type Job = {
@@ -16,6 +17,7 @@ type Job = {
   department?: string;
   location?: string;
   applicationDeadline?: string;
+  expectedStartDate?: string;
   salary: number | null;
   salaryRange?: {
     min?: number;
@@ -34,6 +36,19 @@ type Job = {
     benefits: string[];
     description: string;
   };
+};
+
+type EditDraft = {
+  jobTitle: string;
+  category: string;
+  department: string;
+  location: string;
+  salary: string;
+  employmentType: string;
+  shift: string;
+  applicationDeadline: string;
+  expectedStartDate: string;
+  jobDescription: string;
 };
 
 function formatSalary(job: Job) {
@@ -56,7 +71,46 @@ function formatSalary(job: Job) {
   return null;
 }
 
-function JobCard({ job }: { job: Job }) {
+function buildDraft(job: Job): EditDraft {
+  return {
+    jobTitle: job.jobTitle || job.name || "",
+    category: job.category || "",
+    department: job.department || "",
+    location: job.location || "",
+    salary: typeof job.salary === "number" && Number.isFinite(job.salary) ? String(job.salary) : "",
+    employmentType: job.employmentType || job.details?.type || "",
+    shift: job.shift || job.details?.shift || "",
+    applicationDeadline: job.applicationDeadline || "",
+    expectedStartDate: job.expectedStartDate || "",
+    jobDescription: job.jobDescription || job.details?.description || "",
+  };
+}
+
+function JobCard({
+  job,
+  isOwner,
+  isEditing,
+  draft,
+  onDraftChange,
+  onStartEdit,
+  onCancelEdit,
+  onSaveEdit,
+  onDelete,
+  saving,
+  deleting,
+}: {
+  job: Job;
+  isOwner: boolean;
+  isEditing: boolean;
+  draft: EditDraft | null;
+  onDraftChange: (field: keyof EditDraft, value: string) => void;
+  onStartEdit: () => void;
+  onCancelEdit: () => void;
+  onSaveEdit: () => void;
+  onDelete: () => void;
+  saving: boolean;
+  deleting: boolean;
+}) {
   const [expanded, setExpanded] = useState(false);
   const title = job.jobTitle || job.name;
   const companyName = job.institutionName || job.company;
@@ -72,48 +126,66 @@ function JobCard({ job }: { job: Job }) {
       <div className="text">
         <h2>{title}</h2>
 
-        {/* Company */}
         <p style={{ color: "#00637D", fontWeight: 500 }}>{companyName}</p>
-
-        {/* Location */}
         {job.location && <p>{job.location}</p>}
-
-        {/* Category / Department */}
         {categoryLine && <p>{categoryLine}</p>}
-
-        {/* Employment Type */}
         {employmentType && <p>{employmentType}</p>}
-
-        {/* Shift */}
         {shift && <p>{shift}</p>}
 
-        {/* Description */}
-        {description && <p style={{ paddingBottom: "20px" }}>{description}</p>}
+        {isEditing && draft ? (
+          <div style={{ display: "grid", gap: 8, margin: "12px 0" }}>
+            <input value={draft.jobTitle} onChange={(event) => onDraftChange("jobTitle", event.target.value)} placeholder="Job title" />
+            <input value={draft.category} onChange={(event) => onDraftChange("category", event.target.value)} placeholder="Category" />
+            <input value={draft.department} onChange={(event) => onDraftChange("department", event.target.value)} placeholder="Department" />
+            <input value={draft.location} onChange={(event) => onDraftChange("location", event.target.value)} placeholder="Location" />
+            <input value={draft.salary} onChange={(event) => onDraftChange("salary", event.target.value)} placeholder="Salary" type="number" />
+            <input value={draft.employmentType} onChange={(event) => onDraftChange("employmentType", event.target.value)} placeholder="Employment type" />
+            <input value={draft.shift} onChange={(event) => onDraftChange("shift", event.target.value)} placeholder="Shift" />
+            <label>
+              Application deadline
+              <input value={draft.applicationDeadline} onChange={(event) => onDraftChange("applicationDeadline", event.target.value)} type="date" />
+            </label>
+            <label>
+              Expected start date
+              <input value={draft.expectedStartDate} onChange={(event) => onDraftChange("expectedStartDate", event.target.value)} type="date" />
+            </label>
+            <textarea
+              value={draft.jobDescription}
+              onChange={(event) => onDraftChange("jobDescription", event.target.value)}
+              placeholder="Job description"
+              rows={4}
+            />
+            <div style={{ display: "flex", gap: 8 }}>
+              <button className="btn" style={{ color: "var(--text-2)" }} onClick={onSaveEdit} disabled={saving}>
+                {saving ? "Saving..." : "Save"}
+              </button>
+              <button className="btn" onClick={onCancelEdit} disabled={saving}>Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {description && <p style={{ paddingBottom: "20px" }}>{description}</p>}
 
-        {/* Benefits */}
-        {benefits.length > 0 && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, paddingBottom: 12 }}>
-            {benefits.slice(0, expanded ? undefined : 3).map((b) => (
-              <div key={b} style={{ fontSize: "0.75rem", fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: "var(--secondary2)", color: "var(--text-1)" }}>
-                {b}
-              </div>
-            ))}
-            {/* Displays how many more benefits */}
-            {!expanded && benefits.length > 3 && (
-              <div style={{ fontSize: "0.75rem", fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: "var(--secondary2)", color: "var(--text-1)", opacity: 0.6 }}>
-                +{benefits.length - 3} more
+            {benefits.length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, paddingBottom: 12 }}>
+                {benefits.slice(0, expanded ? undefined : 3).map((b) => (
+                  <div key={b} style={{ fontSize: "0.75rem", fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: "var(--secondary2)", color: "var(--text-1)" }}>
+                    {b}
+                  </div>
+                ))}
+                {!expanded && benefits.length > 3 && (
+                  <div style={{ fontSize: "0.75rem", fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: "var(--secondary2)", color: "var(--text-1)", opacity: 0.6 }}>
+                    +{benefits.length - 3} more
+                  </div>
+                )}
               </div>
             )}
-          </div>
+          </>
         )}
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 20, borderTop: "2px solid var(--text-1)" }}>
           <div className="text" style={{ display: "flex", flexDirection: "column" }}>
-
-            {/* Salary */}
             {salary && <p style={{ margin: 0 }}>{salary}</p>}
-
-            {/* Deadline */}
             {job.applicationDeadline && (
               <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--neg-secondary)", fontWeight: 600 }}>
                 Apply by: {job.applicationDeadline}
@@ -124,10 +196,20 @@ function JobCard({ job }: { job: Job }) {
           <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>
             <Link to={`/jobs/${job._id}`}>
               <button className="btn" style={{ padding: "12px 20px", color: "var(--text-2)" }}>
-                Apply
+                View Details
               </button>
             </Link>
-            {benefits.length > 3 && (
+
+            {isOwner && !isEditing && (
+              <div style={{ display: "flex", gap: 8 }}>
+                <button className="btn" onClick={onStartEdit}>Edit</button>
+                <button className="btn" onClick={onDelete} disabled={deleting}>
+                  {deleting ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+            )}
+
+            {!isEditing && benefits.length > 3 && (
               <button
                 onClick={() => setExpanded((current) => !current)}
                 style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.82rem", fontWeight: 600, color: "var(--button-mid)" }}
@@ -143,25 +225,205 @@ function JobCard({ job }: { job: Job }) {
 }
 
 function DisplayAllJobs() {
+  const { user, role } = useAuth();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [ownerJobIds, setOwnerJobIds] = useState<Set<string>>(new Set());
+  const [editingJobId, setEditingJobId] = useState<string | null>(null);
+  const [editDrafts, setEditDrafts] = useState<Record<string, EditDraft>>({});
+  const [savingJobId, setSavingJobId] = useState<string | null>(null);
+  const [deletingJobId, setDeletingJobId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/jobs")
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
+      .then((response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
       })
       .then((data) => {
-        setJobs(data);
+        setJobs(Array.isArray(data) ? (data as Job[]) : []);
         setLoading(false);
       })
-      .catch((err) => {
-        setError(err.message);
+      .catch((requestError) => {
+        setError(requestError.message);
         setLoading(false);
       });
   }, []);
+
+  useEffect(() => {
+    if (role !== "employer" || !user) {
+      setOwnerJobIds(new Set());
+      return;
+    }
+
+    user.getIdToken()
+      .then((token) =>
+        fetch("/api/employer/jobs", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+      )
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        return response.json();
+      })
+      .then((data) => {
+        const ids = Array.isArray(data)
+          ? data
+              .map((item) => (item && typeof item === "object" ? String((item as { _id?: string })._id || "") : ""))
+              .filter((id) => Boolean(id))
+          : [];
+
+        setOwnerJobIds(new Set(ids));
+      })
+      .catch(() => {
+        setOwnerJobIds(new Set());
+      });
+  }, [role, user]);
+
+  const sortedJobs = useMemo(() => jobs, [jobs]);
+
+  const startEdit = (job: Job) => {
+    setActionError(null);
+    setEditingJobId(job._id);
+    setEditDrafts((current) => ({
+      ...current,
+      [job._id]: buildDraft(job),
+    }));
+  };
+
+  const updateDraft = (jobId: string, field: keyof EditDraft, value: string) => {
+    setEditDrafts((current) => ({
+      ...current,
+      [jobId]: {
+        ...current[jobId],
+        [field]: value,
+      },
+    }));
+  };
+
+  const cancelEdit = () => {
+    setEditingJobId(null);
+  };
+
+  const saveEdit = async (jobId: string) => {
+    if (!user) {
+      setActionError("You must be signed in.");
+      return;
+    }
+
+    const draft = editDrafts[jobId];
+    if (!draft) {
+      setActionError("No edit draft found.");
+      return;
+    }
+
+    const salaryValue = Number(draft.salary);
+    if (!draft.jobTitle.trim()) {
+      setActionError("Job title is required.");
+      return;
+    }
+
+    if (!Number.isFinite(salaryValue) || salaryValue <= 0) {
+      setActionError("Salary must be a valid positive number.");
+      return;
+    }
+
+    try {
+      setSavingJobId(jobId);
+      setActionError(null);
+      const token = await user.getIdToken();
+      const payload = {
+        jobTitle: draft.jobTitle.trim(),
+        category: draft.category.trim(),
+        department: draft.department.trim(),
+        location: draft.location.trim(),
+        salary: salaryValue,
+        employmentType: draft.employmentType.trim(),
+        shift: draft.shift.trim(),
+        applicationDeadline: draft.applicationDeadline,
+        expectedStartDate: draft.expectedStartDate,
+        jobDescription: draft.jobDescription.trim(),
+        description: draft.jobDescription.trim(),
+        details: {
+          type: draft.employmentType.trim(),
+          shift: draft.shift.trim(),
+          description: draft.jobDescription.trim(),
+        },
+      };
+
+      const response = await fetch(`/api/employer/jobs/${jobId}`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const bodyText = await response.text();
+      const body = bodyText ? JSON.parse(bodyText) : null;
+
+      if (!response.ok) {
+        throw new Error(body?.error || "Failed to update job.");
+      }
+
+      const updatedJob = body as Job;
+      setJobs((current) => current.map((job) => (job._id === jobId ? updatedJob : job)));
+      setEditingJobId(null);
+    } catch (saveError) {
+      setActionError(saveError instanceof Error ? saveError.message : "Failed to update job.");
+    } finally {
+      setSavingJobId(null);
+    }
+  };
+
+  const deleteJob = async (jobId: string) => {
+    if (!user) {
+      setActionError("You must be signed in.");
+      return;
+    }
+
+    const confirmed = window.confirm("Delete this job posting?");
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setDeletingJobId(jobId);
+      setActionError(null);
+      const token = await user.getIdToken();
+      const response = await fetch(`/api/employer/jobs/${jobId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const bodyText = await response.text();
+        const body = bodyText ? JSON.parse(bodyText) : null;
+        throw new Error(body?.error || "Failed to delete job.");
+      }
+
+      setJobs((current) => current.filter((job) => job._id !== jobId));
+      setOwnerJobIds((current) => {
+        const next = new Set(current);
+        next.delete(jobId);
+        return next;
+      });
+      if (editingJobId === jobId) {
+        setEditingJobId(null);
+      }
+    } catch (deleteError) {
+      setActionError(deleteError instanceof Error ? deleteError.message : "Failed to delete job.");
+    } finally {
+      setDeletingJobId(null);
+    }
+  };
 
   return (
     <div className="page">
@@ -169,6 +431,12 @@ function DisplayAllJobs() {
         <h1>Job Listings</h1>
         <p style={{ paddingBottom: "40px" }}>{jobs.length} position{jobs.length !== 1 ? "s" : ""} available</p>
       </div>
+
+      {actionError && (
+        <div style={{ marginBottom: 16 }}>
+          <p style={{ color: "var(--neg-secondary)", fontWeight: 600 }}>{actionError}</p>
+        </div>
+      )}
 
       {loading && (
         <div className="page-center">
@@ -190,9 +458,27 @@ function DisplayAllJobs() {
 
       {!loading && !error && jobs.length > 0 && (
         <div className="job-grid">
-          {jobs.slice(0, 16).map((job) => (
-            <JobCard key={job._id} job={job} />
-          ))}
+          {sortedJobs.slice(0, 16).map((job) => {
+            const isOwner = ownerJobIds.has(job._id);
+            const isEditing = editingJobId === job._id;
+
+            return (
+              <JobCard
+                key={job._id}
+                job={job}
+                isOwner={isOwner}
+                isEditing={isEditing}
+                draft={editDrafts[job._id] ?? null}
+                onDraftChange={(field, value) => updateDraft(job._id, field, value)}
+                onStartEdit={() => startEdit(job)}
+                onCancelEdit={cancelEdit}
+                onSaveEdit={() => saveEdit(job._id)}
+                onDelete={() => deleteJob(job._id)}
+                saving={savingJobId === job._id}
+                deleting={deletingJobId === job._id}
+              />
+            );
+          })}
         </div>
       )}
     </div>
