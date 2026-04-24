@@ -126,3 +126,16 @@
     padding-top: 20px;
     border-top: 2px solid var(--secondary2);
 }
+
+.search-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+}
+
+.search-card {
+    background: var(--secondary1);
+    border-radius: 12px;
+    border: 1px solid var(--secondary2);
+    padding: 24px;
+}

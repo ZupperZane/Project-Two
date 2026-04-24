@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import NavbarComponent from "../components/Navbar";
+import "../css/Page.css";
 
 type Job = {
   _id: string;
@@ -76,57 +77,84 @@ function SearchPage() {
   const resultCount = type === "jobs" ? jobResults.length : employerResults.length;
 
   return (
-    <div className="flex flex-col items-center min-h-screen gap-6">
+    <div className="page">
       <NavbarComponent />
 
-      <div className="w-full max-w-5xl px-4">
-        <h1 className="text-2xl font-bold mb-1">
-          Search results for "{query}"
-        </h1>
-        <p className="text-sm text-gray-500 mb-4">
-          {resultCount} {type} found
-        </p>
-
-        {loading && <p>Searching...</p>}
-        {error && <p className="text-red-500">Error: {error}</p>}
-        {!loading && !error && resultCount === 0 && (
-          <p>No {type} found for "{query}".</p>
-        )}
-
-        {type === "jobs" && !loading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {jobResults.map((job) => (
-              <Link to={`/jobs/${job._id}`} key={job._id}>
-                <div className="border rounded-lg p-4 hover:shadow-md transition">
-                  <h2 className="font-semibold text-lg">{job.jobTitle ?? job.name}</h2>
-                  <p className="text-gray-600">{job.institutionName ?? job.company}</p>
-                  {job.location && <p className="text-sm">{job.location}</p>}
-                  {job.employmentType && <p className="text-sm">{job.employmentType}</p>}
-                  <p className="text-sm font-medium mt-2">{job.details?.pay ?? "Salary not listed"}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
-
-        {type === "employers" && !loading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {employerResults.map((employer) => (
-              <Link to={`/employers/${employer.slug || employer._id}`} key={employer._id}>
-                <div className="border rounded-lg p-4 hover:shadow-md transition">
-                  <h2 className="font-semibold text-lg">{employer.name}</h2>
-                  {employer.industry && <p className="text-gray-600">{employer.industry}</p>}
-                  {employer.location && <p className="text-sm">{employer.location}</p>}
-                  {employer.description && (
-                    <p className="text-sm text-gray-500 mt-1 line-clamp-2">{employer.description}</p>
-                  )}
-                  <p className="text-sm mt-2">{employer.jobCount ?? 0} open positions</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
+      <div className="text">
+        <h1>Results for "{query}"</h1>
+        <p style={{ paddingBottom: 40 }}>{resultCount} {type} found</p>
       </div>
+
+      {loading && (
+        <div className="page-center">
+          <p style={{ color: "var(--button-mid)", fontSize: "2.5rem", fontWeight: 500 }}>Searching...</p>
+        </div>
+      )}
+
+      {!loading && error && (
+        <div className="page-center">
+          <p style={{ color: "var(--neg-secondary)", fontSize: "2.5rem", fontWeight: 500 }}>Error: {error}</p>
+        </div>
+      )}
+
+      {!loading && !error && resultCount === 0 && (
+        <div className="page-center">
+          <p style={{ color: "var(--button-mid)", fontSize: "2.5rem", fontWeight: 500 }}>No {type} found for "{query}"</p>
+        </div>
+      )}
+
+      {/* Job Results */}
+      {type === "jobs" && !loading && !error && jobResults.length > 0 && (
+        <div className="search-grid">
+          {jobResults.map((job) => (
+            <div key={job._id} className="search-card">
+              <div className="text">
+                <h2>{job.jobTitle ?? job.name}</h2>
+                <p style={{ color: "#00637D", fontWeight: 500 }}>{job.institutionName ?? job.company}</p>
+                {job.location && <p>{job.location}</p>}
+                {job.employmentType && <p>{job.employmentType}</p>}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 10, borderTop: "2px solid var(--secondary2)", marginTop: 10 }}>
+                <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-1)" }}>
+                  {job.details?.pay || "Salary not listed"}
+                </div>
+                <Link to={`/jobs/${job._id}`}>
+                  <button className="btn" style={{ padding: "9px 18px", fontSize: "0.88rem", color: "var(--text-2)" }}>
+                    View
+                  </button>
+                </Link>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Employer Results */}
+      {type === "employers" && !loading && !error && employerResults.length > 0 && (
+        <div className="search-grid">
+          {employerResults.map((employer) => (
+            <div key={employer._id} className="search-card">
+              <div className="text">
+                <h2>{employer.name}</h2>
+                {employer.industry && <p style={{ color: "#00637D", fontWeight: 500 }}>{employer.industry}</p>}
+                {employer.location && <p>{employer.location}</p>}
+                {employer.description && <p>{employer.description}</p>}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 10, borderTop: "2px solid var(--secondary2)", marginTop: 10 }}>
+                <div style={{ fontSize: "0.85rem", fontWeight: 700, color: employer.jobCount ?? 0 > 0 ? "var(--pos-tertiary)" : "var(--neg-secondary)" }}>
+                  {employer.jobCount ?? 0} open role{employer.jobCount === 1 ? "" : "s"}
+                </div>
+                <Link to={`/employer/${employer.slug || employer._id}`}>
+                  <button className="btn" style={{ padding: "9px 18px", fontSize: "0.88rem", color: "var(--text-2)" }}>
+                    View
+                  </button>
+                </Link>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
     </div>
   );
 }
