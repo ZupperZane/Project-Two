@@ -20,6 +20,8 @@ import PrivateRoute from "./PrivateRoute";
 import DisplayAllJobs from "../components/DisplayAllJobs";
 import SearchPage from "../pages/SearchPage";
 
+import CreatePostPage from "../pages/CreatePost";
+
 
 const mainRouter: RouteObject[] = [
   {
@@ -62,6 +64,10 @@ const mainRouter: RouteObject[] = [
       {
         path: "login",
         element: <Login />,
+      },
+      {
+        path: "createPost",
+        element:<CreatePostPage/>
       },
       {
         path: "signup",

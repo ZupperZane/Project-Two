@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import useAuth from "../hooks/useAuth";
 import { ROUTES } from "../utils/constants";
+import { Link } from "react-router-dom";
 import NavbarComponent from "../components/Navbar";
 import { useRef, useState } from "react";
 
@@ -59,29 +60,35 @@ function Dashboard() {
       <p>Logged in as: {user?.email}</p>
       <p>Role: {role ?? "unknown (MongoDB may not be connected)"}</p>
 
-      {role === "job_seeker" && (
-        <div className="flex flex-col items-center gap-2">
-          <button
-            className="btn btn-outline"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-          >
-            {uploading ? "Uploading..." : "Upload Resume"}
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".pdf,.doc,.docx"
-            className="hidden"
-            onChange={handleResumeUpload}
-          />
-          {uploadMsg && (
-            <p className={`text-sm ${uploadMsg.includes("failed") ? "text-red-500" : "text-green-500"}`}>
-              {uploadMsg}
-            </p>
-          )}
-        </div>
-      )}
+{role === "job_seeker" && (
+  <div className="flex flex-col items-center gap-2">
+    <button
+      className="btn btn-outline"
+      onClick={() => fileInputRef.current?.click()}
+      disabled={uploading}
+    >
+      {uploading ? "Uploading..." : "Upload Resume"}
+    </button>
+    <input
+      ref={fileInputRef}
+      type="file"
+      accept=".pdf,.doc,.docx"
+      className="hidden"
+      onChange={handleResumeUpload}
+    />
+    {uploadMsg && (
+      <p className={`text-sm ${uploadMsg.includes("failed") ? "text-red-500" : "text-green-500"}`}>
+        {uploadMsg}
+      </p>
+    )}
+  </div>
+)}
+
+{role === "employer" && (
+  <Link to="/CreatePost" className="nav-button">
+    Create Post
+  </Link>
+)}
         <button className="btn btn-error btn-outline" onClick={handleDelete}>Delete account</button>
     </div>
   );
