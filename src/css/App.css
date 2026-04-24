@@ -1,4 +1,4 @@
-:light-mode {
+:root {
   --base: #A2E8E8;
   --button-light: #A2C5E8;
   --button-mid: #3A56DB;
@@ -13,7 +13,22 @@
   --neg-secondary: #ED6455;
 }
 
-:dark-mode {
+.light-mode {
+  --base: #A2E8E8;
+  --button-light: #A2C5E8;
+  --button-mid: #3A56DB;
+  --button-heavy: #1937A6;
+  --text-1: #2B2B2B;
+  --text-2: #E3E3E3;
+  --secondary1: #E3C698;
+  --secondary2: #E0C475;
+  --pos-primary: #66EDA3;
+  --pos-secondary: #32C273;
+  --neg-primary: #FAA591;
+  --neg-secondary: #ED6455;
+}
+
+.dark-mode {
   --base: #0D3838;
   --button-light: #2F2A92;
   --button-mid: #0086D1;
@@ -210,5 +225,45 @@
   &::after {
     right: 0;
     border-right-color: var(--border);
+  }
+  .notification {
+  position: fixed;
+  top: 20px;
+  right: 30px;
+  background: #1937A6;
+  color: white;
+  padding: 14px 22px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 18px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.3);
+  z-index: 999999;
+}
+}
+/* Resume Notification Toast */
+
+.resume-toast {
+  position: fixed;
+  top: 90px;
+  right: 30px;
+  background: #1937A6;
+  color: white;
+  padding: 14px 24px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 18px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.3);
+  z-index: 9999;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
   }
 }
