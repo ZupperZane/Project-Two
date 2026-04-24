@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import NotificationPopup from "./NotificationPopup";
+import useAuth from "../hooks/useAuth";
 
 type Job = {
   _id: string;
@@ -57,7 +57,48 @@ function formatSalary(job: Job) {
   return "Not listed";
 }
 
+function QuickApply({ jobId }: { jobId: string }) {
+  const { user, role } = useAuth();
+  const [status, setStatus] = useState<"idle" | "loading" | "applied" | "error">("idle");
+  const [errorMsg, setErrorMsg] = useState("");
+
+  if (role !== "job_seeker") return null;
+
+  const handleApply = async () => {
+    if (!user) return;
+    setStatus("loading");
+    const token = await user.getIdToken();
+    const res = await fetch("/api/job-seeker/applications", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ jobId }),
+    });
+    if (res.status === 409) {
+      setStatus("applied");
+    } else if (res.ok) {
+      setStatus("applied");
+    } else {
+      const data = await res.json().catch(() => null);
+      setErrorMsg(data?.error ?? "Application failed.");
+      setStatus("error");
+    }
+  };
+
+  if (status === "applied") return <p style={{ fontWeight: 600, color: "var(--button-heavy)" }}>Applied ✓</p>;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <button className="btn" onClick={handleApply} disabled={status === "loading"}
+        style={{ color: "var(--text-2)" }}>
+        {status === "loading" ? "Applying..." : "Quick Apply"}
+      </button>
+      {status === "error" && <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--neg-secondary)" }}>{errorMsg}</p>}
+    </div>
+  );
+}
+
 function JobDetails({ job }: { job: Job }) {
+  const { role } = useAuth();
   const [notification, setNotification] = useState("");
 
   const title = job.jobTitle || job.name;
@@ -69,26 +110,40 @@ function JobDetails({ job }: { job: Job }) {
   const benefits = job.benefits?.length ? job.benefits : job.details?.benefits ?? [];
   const qualifications = job.requiredQualifications ?? [];
 
-  const handleSendResume = () => {
-    setNotification("Resume is being sent...");
+  const handleResumeClick = () => {
+    if (role === "employer") {
+      setNotification("Resume is being downloaded...");
+    }
+
+    if (role === "job_seeker") {
+      setNotification("Resume is being sent...");
+    }
 
     setTimeout(() => {
-      setNotification("Resume sent successfully.");
-    }, 3000);
-  };
-
-  const handleDownloadResume = () => {
-    setNotification("Resume is being downloaded...");
-
-    setTimeout(() => {
-      setNotification("Resume downloaded successfully.");
+      setNotification("");
     }, 3000);
   };
 
   return (
     <article>
+
+      {notification && (
+        <div className="resume-toast">
+
+          {notification}
+        </div>
+      )}
+
       <h1>{title}</h1>
       <p>{companyName}</p>
+
+      <QuickApply jobId={job._id} />
+
+      {(role === "employer" || role === "job_seeker") && (
+        <button className="btn" onClick={handleResumeClick}>
+          {role === "employer" ? "Download Resume" : "Send Resume"}
+        </button>
+      )}
 
       <div>
         <p><strong>Job ID:</strong> {job.idCode || "N/A"}</p>
@@ -131,23 +186,6 @@ function JobDetails({ job }: { job: Job }) {
         </div>
       )}
 
-      <div style={{ display: "flex", gap: "12px", marginTop: "20px" }}>
-        <button onClick={handleSendResume}>
-          Send Resume
-        </button>
-
-        <button onClick={handleDownloadResume}>
-          Download Resume
-        </button>
-      </div>
-
-      {notification && (
-        <NotificationPopup
-          message={notification}
-          duration={5}
-          onClose={() => setNotification("")}
-        />
-      )}
     </article>
   );
 }
@@ -161,7 +199,6 @@ export default function SingleJobPage() {
 
   useEffect(() => {
     if (!id) return;
-
     fetch(`/api/jobs/${id}`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch job");
