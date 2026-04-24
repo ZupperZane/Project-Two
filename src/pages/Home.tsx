@@ -10,7 +10,7 @@ function Home() {
     <div className="page">
       <NavbarComponent />
       <div className="page-center" style={{ paddingTop: 80 }}>
-        <h1 style={{ color: "var(--text-1)", margin: 0 }}>Welcome</h1>
+        <h1 style={{ color: "var(--text-1)", margin: 0 }}>Welcome...To Zombocom.</h1>
         <div style={{display: "flex", gap: 60, flexWrap: "wrap", justifyContent: "center", paddingTop: 80, }}>
           {user
             ? <Link to="/dashboard" className="btn" style={{ color: "var(--text-2)" }}>Go to Dashboard</Link>
