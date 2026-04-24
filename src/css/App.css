@@ -9,8 +9,9 @@
   --secondary2: #E0C475;
   --pos-primary: #66EDA3;
   --pos-secondary: #32C273;
+  --pos-tertiary: #009443;
   --neg-primary: #FAA591;
-  --neg-secondary: #ED6455;
+  --neg-secondary: #E3341B;
 }
 
 .light-mode {
@@ -25,7 +26,7 @@
   --pos-primary: #66EDA3;
   --pos-secondary: #32C273;
   --neg-primary: #FAA591;
-  --neg-secondary: #ED6455;
+  --neg-secondary: #E3341B;
 }
 
 .dark-mode {

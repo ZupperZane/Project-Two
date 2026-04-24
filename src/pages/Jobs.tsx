@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import NavbarComponent from "../components/Navbar";
 import DisplayAllJobs from "../components/DisplayAllJobs";
-
+import "../css/Page.css";
 
 function Jobs(){
 // Mongo Interaction Here
