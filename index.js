@@ -2,12 +2,16 @@ import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import { getDb, hasMongoConfig } from "./mongo.js";
-import { ObjectId } from "mongodb";
+import { ObjectId, GridFSBucket } from "mongodb";
+import multer from "multer";
 import {
   getFirebaseAdminAuth,
   getFirebaseAdminInitError,
   hasFirebaseAdmin,
 } from "./firebaseAdmin.js";
+
+// Resume uploads held in memory before streaming to GridFS; 5MB cap
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
 const app = express();
 const __filename = fileURLToPath(import.meta.url);
@@ -157,6 +161,7 @@ function mapJobDocument(job) {
   };
 }
 
+// All valid roles; used for access control and profile collection routing
 const USER_ROLES = {
   ADMIN: "admin",
   EMPLOYER: "employer",
@@ -322,6 +327,7 @@ function parseAllowedSetFromEnv(value) {
   );
 }
 
+// Populated from .env — comma-separated emails/UIDs allowed to self-bootstrap as admin
 const adminEmailAllowlist = parseAllowedSetFromEnv(process.env.ADMIN_EMAILS);
 const adminUidAllowlist = parseAllowedSetFromEnv(process.env.ADMIN_UIDS);
 
@@ -343,6 +349,7 @@ function extractBearerToken(authorizationHeader) {
   return token;
 }
 
+// Verifies Firebase ID token and attaches decoded token to req.authUser
 async function authenticateRequest(req, res, next) {
   if (!hasFirebaseAdmin()) {
     res.status(503).json({
@@ -370,6 +377,7 @@ async function authenticateRequest(req, res, next) {
   }
 }
 
+// Fetches MongoDB user doc and attaches to req.currentUser; also syncs name/email from Firebase if missing
 async function loadCurrentUser(req, res, next) {
   if (!hasMongoConfig()) {
     res.status(503).json({ error: "MongoDB is not configured." });
@@ -418,6 +426,7 @@ async function loadCurrentUser(req, res, next) {
   }
 }
 
+// Middleware — restricts route to given roles; also blocks disabled accounts
 function requireRoles(...roles) {
   return (req, res, next) => {
     const role = normalizeRole(req.currentUser?.role);
@@ -438,6 +447,7 @@ function requireRoles(...roles) {
   };
 }
 
+// Creates the role-specific profile doc if it doesn't exist yet (upsert with defaults)
 async function ensureProfileDocument(db, uid, role) {
   const now = getNow();
   const collection = getProfileCollectionName(role);
@@ -562,6 +572,91 @@ function buildProfilePatch(role, inputProfile) {
 
   return { updates };
 }
+
+// Accepts multipart resume upload, stores in GridFS, saves fileId to job_seeker_profiles
+app.post(
+  "/api/job-seeker/resume",
+  authenticateRequest,
+  loadCurrentUser,
+  requireRoles(USER_ROLES.JOB_SEEKER),
+  upload.single("resume"),
+  async (req, res) => {
+    if (!req.file) {
+      res.status(400).json({ error: "No file uploaded." });
+      return;
+    }
+
+    const allowed = ["application/pdf", "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+    if (!allowed.includes(req.file.mimetype)) {
+      res.status(400).json({ error: "Only PDF, DOC, and DOCX files are allowed." });
+      return;
+    }
+
+    try {
+      const db = await getDb();
+      const bucket = new GridFSBucket(db, { bucketName: "resumes" });
+
+      const existing = await db.collection("resumes.files")
+        .findOne({ "metadata.uid": req.authUser.uid });
+      if (existing) {
+        await bucket.delete(existing._id);
+      }
+
+      const uploadStream = bucket.openUploadStream(req.file.originalname, {
+        contentType: req.file.mimetype,
+        metadata: { uid: req.authUser.uid },
+      });
+
+      uploadStream.end(req.file.buffer);
+
+      await new Promise((resolve, reject) => {
+        uploadStream.on("finish", resolve);
+        uploadStream.on("error", reject);
+      });
+
+      const fileId = uploadStream.id.toString();
+
+      await db.collection("job_seeker_profiles").updateOne(
+        { _id: req.authUser.uid },
+        { $set: { resumeFileId: fileId, updatedAt: getNow() } },
+        { upsert: true }
+      );
+
+      res.status(201).json({ fileId });
+    } catch (error) {
+      console.error("Failed to upload resume:", error);
+      res.status(500).json({ error: "Failed to upload resume." });
+    }
+  }
+);
+
+// Streams resume binary from GridFS; unauthed route — fileId (ObjectId) is the access control
+app.get("/api/resume/:fileId", async (req, res) => {
+  if (!ObjectId.isValid(req.params.fileId)) {
+    res.status(400).json({ error: "Invalid file ID." });
+    return;
+  }
+
+  try {
+    const db = await getDb();
+    const bucket = new GridFSBucket(db, { bucketName: "resumes" });
+    const fileId = new ObjectId(req.params.fileId);
+
+    const files = await db.collection("resumes.files").find({ _id: fileId }).toArray();
+    if (!files.length) {
+      res.status(404).json({ error: "Resume not found." });
+      return;
+    }
+
+    res.set("Content-Type", files[0].contentType ?? "application/octet-stream");
+    res.set("Content-Disposition", `attachment; filename="${files[0].filename}"`);
+    bucket.openDownloadStream(fileId).pipe(res);
+  } catch (error) {
+    console.error("Failed to download resume:", error);
+    res.status(500).json({ error: "Failed to download resume." });
+  }
+});
 
 app.get("/api/companies", async (req, res) => {
   if (!hasMongoConfig()) {
@@ -779,6 +874,7 @@ app.get("/api/jobs/:id", async (req, res) => {
   }
 });
 
+// Creates the user doc + role-specific profile on first sign-in; safe to call again (upsert)
 app.post("/api/users/bootstrap", authenticateRequest, async (req, res) => {
   if (!hasMongoConfig()) {
     res.status(503).json({ error: "MongoDB is not configured." });
@@ -1636,6 +1732,7 @@ app.delete(
   }
 );
 
+// Returns applicants for a job; joins job_seeker_profiles to include resumeFileId and candidate info
 app.get(
   "/api/employer/jobs/:id/applicants",
   authenticateRequest,
@@ -1701,11 +1798,11 @@ app.get(
             headline:
               profileByUid.get(application.applicantId ?? application.jobSeekerUid)
                 ?.headline ?? "",
-            resumeUrl:
-              application.resumeUrl ||
+            resumeFileId:
+              application.resumeFileId ||
               profileByUid.get(application.applicantId ?? application.jobSeekerUid)
-                ?.resumeUrl ||
-              "",
+                ?.resumeFileId ||
+              null,
           },
         }))
       );
@@ -1766,6 +1863,7 @@ app.patch(
   }
 );
 
+// Submits an application; snapshots resumeFileId from seeker profile at apply time
 app.post(
   "/api/job-seeker/applications",
   authenticateRequest,
@@ -1774,10 +1872,6 @@ app.post(
   async (req, res) => {
     const jobId = String(req.body?.jobId || "").trim();
     const coverLetter = toSafeString(req.body?.coverLetter, 4000) ?? "";
-    const resumeUrlFromBody = toSafeString(
-      req.body?.resumeUrl ?? req.body?.uploadedDocumentUrl,
-      500
-    );
     const documentUrlFromBody = toSafeString(req.body?.documentUrl, 500);
 
     if (!ObjectId.isValid(jobId)) {
@@ -1807,7 +1901,6 @@ app.post(
         .findOne({ _id: req.authUser.uid });
 
       const dateApplied = getNow();
-      const resumeUrl = resumeUrlFromBody ?? seekerProfile?.resumeUrl ?? "";
       const applicantId = req.authUser.uid;
 
       const application = {
@@ -1819,7 +1912,7 @@ app.post(
         company: job.institutionName ?? job.company ?? "",
         employerUid: job.employerUid ?? null,
         jobSeekerUid: req.authUser.uid,
-        resumeUrl,
+        resumeFileId: seekerProfile?.resumeFileId ?? null,
         documentUrl: documentUrlFromBody ?? "",
         coverLetter,
         status: "submitted",

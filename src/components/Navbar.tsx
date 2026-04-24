@@ -1,22 +1,13 @@
-import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { Link } from "react-router-dom";
 import useAuth from "../hooks/useAuth";
+import SearchBar from "./SearchBar";
 import "../css/Navbar.css";
 import "../css/index.css"
 
 function NavbarComponent(){
-const [text,setText] = useState("");
-const [searchtype,setSearchtype] = useState<"Employer"|"Job">("Job");
-const { user, signOutUser } = useAuth();
-const navigate = useNavigate();
+  const { user, signOutUser } = useAuth();
 
-  const handleSearch = () => {
-    if (!text.trim()) return;
-    const type = searchtype === "Job" ? "jobs" : "employers";
-    navigate(`/search?type=${type}&q=${encodeURIComponent(text.trim())}`);
-  };
-
-    return(
+  return (
     <div className="w-full flex flex-col items-center gap-10">
       <nav className="navbar">
         <div className="nav-links">
@@ -33,28 +24,11 @@ const navigate = useNavigate();
           )}
         </div>
 
-        <div style={{ alignItems: "center", overflow: "hidden" }}>
-          <div>
-            {(["Job", "Employer"] as const).map((type) => (
-              <button key={type} onClick={() => setSearchtype(type)}>
-                {type}
-              </button>
-            ))}
-          </div>
+        <SearchBar size="compact" />
 
-          <input
-            type="text"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-            placeholder={`Search ${searchtype}s...`}
-          />
-
-          <button onClick={handleSearch}>Search</button>
-        </div>
       </nav>
     </div>
-    )
+  );
 }
 
 export default NavbarComponent;
