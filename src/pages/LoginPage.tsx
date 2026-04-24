@@ -7,7 +7,7 @@ import NavbarComponent from "../components/Navbar";
 import "../css/Page.css"
 
 function Login() {
-  const { signInUser, signInWithGoogle, firebaseConfigured } = useAuth();
+  const { signInUser, signInWithGoogle, firebaseConfigured, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [error, setError] = useState<string>("");
@@ -40,6 +40,11 @@ function Login() {
       setError(message);
     }
   };
+
+  if (user) {
+    navigate(ROUTES.DASHBOARD, { replace: true });
+    return null;
+  }
 
   if (!firebaseConfigured) {
     return (

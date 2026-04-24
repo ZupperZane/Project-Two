@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import useAuth from "../hooks/useAuth";
 
 type Job = {
   _id: string;
@@ -56,6 +57,46 @@ function formatSalary(job: Job) {
   return "Not listed";
 }
 
+function QuickApply({ jobId }: { jobId: string }) {
+  const { user, role } = useAuth();
+  const [status, setStatus] = useState<"idle" | "loading" | "applied" | "error">("idle");
+  const [errorMsg, setErrorMsg] = useState("");
+
+  if (role !== "job_seeker") return null;
+
+  const handleApply = async () => {
+    if (!user) return;
+    setStatus("loading");
+    const token = await user.getIdToken();
+    const res = await fetch("/api/job-seeker/applications", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ jobId }),
+    });
+    if (res.status === 409) {
+      setStatus("applied");
+    } else if (res.ok) {
+      setStatus("applied");
+    } else {
+      const data = await res.json().catch(() => null);
+      setErrorMsg(data?.error ?? "Application failed.");
+      setStatus("error");
+    }
+  };
+
+  if (status === "applied") return <p style={{ fontWeight: 600, color: "var(--button-heavy)" }}>Applied ✓</p>;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <button className="btn" onClick={handleApply} disabled={status === "loading"}
+        style={{ color: "var(--text-2)" }}>
+        {status === "loading" ? "Applying..." : "Quick Apply"}
+      </button>
+      {status === "error" && <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--neg-secondary)" }}>{errorMsg}</p>}
+    </div>
+  );
+}
+
 function JobDetails({ job }: { job: Job }) {
   const title = job.jobTitle || job.name;
   const companyName = job.institutionName || job.company;
@@ -69,6 +110,7 @@ function JobDetails({ job }: { job: Job }) {
     <article>
       <h1>{title}</h1>
       <p>{companyName}</p>
+      <QuickApply jobId={job._id} />
 
       <div>
         <p><strong>Job ID:</strong> {job.idCode || "N/A"}</p>

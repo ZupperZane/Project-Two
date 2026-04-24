@@ -9,7 +9,7 @@ import "../css/Page.css"
 import "../css/App.css"
 
 function Signup() {
-  const { createUser, updateUserProfile, bootstrapUserProfile, firebaseConfigured } = useAuth();
+  const { createUser, updateUserProfile, bootstrapUserProfile, firebaseConfigured, user } = useAuth();
   const navigate = useNavigate();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
@@ -36,6 +36,11 @@ function Signup() {
       setError(message);
     }
   };
+
+  if (user) {
+    navigate(ROUTES.DASHBOARD, { replace: true });
+    return null;
+  }
 
   if (!firebaseConfigured) {
     return (

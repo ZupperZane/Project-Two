@@ -85,13 +85,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       try {
-        let resolvedRole = await fetchMyRole(currentUser);
-
-        if (!resolvedRole) {
-          await bootstrapUserProfile("job_seeker");
-          resolvedRole = await fetchMyRole(currentUser);
-        }
-
+        const resolvedRole = await fetchMyRole(currentUser);
         setRole(resolvedRole ?? null);
       } catch {
         setRole(null);
@@ -101,7 +95,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     return unsubscribe;
-  }, [bootstrapUserProfile, fetchMyRole]);
+  }, [fetchMyRole]);
 
   const value = {
     user,

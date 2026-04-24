@@ -1,6 +1,6 @@
 import { Navigate } from "react-router-dom";
 import type { RouteObject } from "react-router-dom";
-import Root from "../layout/root";
+import Root from "../layout/Root";
 import { ROUTES } from "../utils/constants";
 import Home from "../pages/Home";
 import ErrorPage from "../pages/ErrorPage";
@@ -13,11 +13,14 @@ import JobID from "../pages/JobID";
 
 import Login from "../pages/LoginPage";
 import Signup from "../pages/SignUpPage";
+
 import Dashboard from "../pages/Dashboard";
 import PrivateRoute from "./PrivateRoute";
 
 import DisplayAllJobs from "../components/DisplayAllJobs";
+import SearchPage from "../pages/SearchPage";
 
+import CreatePostPage from "../pages/CreatePost";
 
 
 const mainRouter: RouteObject[] = [
@@ -63,8 +66,16 @@ const mainRouter: RouteObject[] = [
         element: <Login />,
       },
       {
+        path: "createPost",
+        element:<CreatePostPage/>
+      },
+      {
         path: "signup",
         element: <Signup />,
+      },
+            {
+        path: "search",
+        element: <SearchPage />,
       },
     ],
   },
