@@ -26,78 +26,6 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-app.get("/api/messages", async (req, res) => {
-  if (!hasMongoConfig()) {
-    res.status(503).json({
-      error:
-        "MongoDB is not configured. Add MONGODB_URI in your environment.",
-    });
-    return;
-  }
-
-  try {
-    const db = await getDb();
-    const messages = await db
-      .collection("messages")
-      .find({})
-      .sort({ createdAt: -1 })
-      .limit(20)
-      .toArray();
-
-    res.json(
-      messages.map((message) => ({
-        id: message._id.toString(),
-        text: message.text,
-        createdAt: message.createdAt,
-      }))
-    );
-  } catch (error) {
-    console.error("Failed to fetch messages:", error);
-    res.status(500).json({ error: "Failed to fetch messages." });
-  }
-});
-
-app.post("/api/messages", async (req, res) => {
-  if (!hasMongoConfig()) {
-    res.status(503).json({
-      error:
-        "MongoDB is not configured. Add MONGODB_URI in your environment.",
-    });
-    return;
-  }
-
-  const text = typeof req.body?.text === "string" ? req.body.text.trim() : "";
-
-  if (!text) {
-    res.status(400).json({ error: "Message text is required." });
-    return;
-  }
-
-  if (text.length > 500) {
-    res
-      .status(400)
-      .json({ error: "Message text cannot exceed 500 characters." });
-    return;
-  }
-
-  try {
-    const db = await getDb();
-    const createdAt = new Date().toISOString();
-    const result = await db.collection("messages").insertOne({
-      text,
-      createdAt,
-    });
-
-    res.status(201).json({
-      id: result.insertedId.toString(),
-      text,
-      createdAt,
-    });
-  } catch (error) {
-    console.error("Failed to create message:", error);
-    res.status(500).json({ error: "Failed to create message." });
-  }
-});
 
 function mapCompanyDocument(company) {
   const rawJobIds = Array.isArray(company.jobIds)
@@ -235,21 +163,12 @@ const USER_ROLES = {
   JOB_SEEKER: "job_seeker",
 };
 
-const LEGACY_ROLE_MAP = {
-  jobseeker: USER_ROLES.JOB_SEEKER,
-  job_poster: USER_ROLES.EMPLOYER,
-};
-
 function normalizeRole(value) {
   if (typeof value !== "string") {
     return null;
   }
 
   const normalized = value.trim().toLowerCase();
-  if (normalized in LEGACY_ROLE_MAP) {
-    return LEGACY_ROLE_MAP[normalized];
-  }
-
   if (
     normalized === USER_ROLES.ADMIN ||
     normalized === USER_ROLES.EMPLOYER ||
@@ -462,39 +381,6 @@ async function loadCurrentUser(req, res, next) {
     const uid = req.authUser.uid;
 
     let user = await db.collection("users").findOne({ _id: uid });
-    if (!user) {
-      const legacySeeker = await db.collection("jobseekers").findOne({ _id: uid });
-      if (legacySeeker) {
-        user = {
-          _id: uid,
-          name: getNameFromAuthUser(req.authUser),
-          email: req.authUser.email ?? legacySeeker.email ?? "",
-          role: USER_ROLES.JOB_SEEKER,
-          profile: {},
-          status: "active",
-          createdAt: getNow(),
-          updatedAt: getNow(),
-        };
-        await db.collection("users").insertOne(user);
-      }
-    }
-
-    if (!user) {
-      const legacyPoster = await db.collection("job_posters").findOne({ _id: uid });
-      if (legacyPoster) {
-        user = {
-          _id: uid,
-          name: getNameFromAuthUser(req.authUser),
-          email: req.authUser.email ?? legacyPoster.email ?? "",
-          role: USER_ROLES.EMPLOYER,
-          profile: {},
-          status: "active",
-          createdAt: getNow(),
-          updatedAt: getNow(),
-        };
-        await db.collection("users").insertOne(user);
-      }
-    }
 
     if (!user) {
       res.status(404).json({ error: "User profile not found. Run bootstrap first." });
@@ -1059,25 +945,6 @@ app.patch("/api/users/me", authenticateRequest, loadCurrentUser, async (req, res
   }
 });
 
-app.get(
-  "/api/users/me/notices",
-  authenticateRequest,
-  loadCurrentUser,
-  async (req, res) => {
-    try {
-      const notices = await req.db
-        .collection("moderation_logs")
-        .find({ targetUid: req.authUser.uid })
-        .sort({ createdAt: -1 })
-        .toArray();
-
-      res.json(notices);
-    } catch (error) {
-      console.error("Failed to fetch notices:", error);
-      res.status(500).json({ error: "Failed to fetch notices." });
-    }
-  }
-);
 
 app.delete(
   "/api/users/me",
