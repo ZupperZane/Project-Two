@@ -658,6 +658,7 @@ app.get("/api/resume/:fileId", async (req, res) => {
   }
 });
 
+
 app.get("/api/companies", async (req, res) => {
   if (!hasMongoConfig()) {
     res.status(503).json({ error: "MongoDB is not configured." });
@@ -666,9 +667,42 @@ app.get("/api/companies", async (req, res) => {
 
   try {
     const db = await getDb();
+    const andFilters = [];
+    const query = req.query;
+
+    if (typeof query.search === "string" && query.search.trim()) {
+      const searchRegex = new RegExp(escapeRegex(query.search.trim()), "i");
+      andFilters.push({
+        $or: [
+          { name: { $regex: searchRegex } },
+          { slug: { $regex: searchRegex } },
+          { companyId: { $regex: searchRegex } },
+          { industry: { $regex: searchRegex } },
+          { location: { $regex: searchRegex } },
+          { description: { $regex: searchRegex } },
+        ],
+      });
+    }
+
+    if (typeof query.industry === "string" && query.industry.trim()) {
+      const industryRegex = new RegExp(`^${escapeRegex(query.industry.trim())}$`, "i");
+      andFilters.push({ industry: { $regex: industryRegex } });
+    }
+
+    if (typeof query.location === "string" && query.location.trim()) {
+      const locationRegex = new RegExp(escapeRegex(query.location.trim()), "i");
+      andFilters.push({ location: { $regex: locationRegex } });
+    }
+
+    const filter = andFilters.length > 0 ? { $and: andFilters } : {};
+    
+    console.log("search query:", req.query.search);
+    console.log("filter:", JSON.stringify(filter));
+
+    
     const companies = await db
       .collection("companies")
-      .find({})
+      .find(filter)
       .sort({ name: 1 })
       .toArray();
 

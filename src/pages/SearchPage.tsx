@@ -52,7 +52,9 @@ function SearchPage() {
     if (!query) return;
     setLoading(true);
     setError(null);
-
+    setJobResults([]);
+    setEmployerResults([]);
+    
     const url =
       type === "jobs"
         ? `/api/jobs?search=${encodeURIComponent(query)}`
