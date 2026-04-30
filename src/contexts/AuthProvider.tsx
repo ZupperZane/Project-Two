@@ -18,12 +18,16 @@ import type { UserRole } from "./AuthContext";
 type MeResponse = {
   user?: {
     role?: UserRole;
+    status?: string;
+    disabledReason?: string | null;
   };
 };
 
 const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<UserRole>(null);
+  const [banned, setBanned] = useState(false);
+  const [banReason, setBanReason] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const getAuthHeaders = useCallback(async (currentUser: User) => {
@@ -50,7 +54,12 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     const data = (await response.json()) as MeResponse;
-    return data.user?.role ?? null;
+    const isDisabled = data.user?.status === "disabled";
+    return {
+      role: data.user?.role ?? null,
+      banned: isDisabled,
+      banReason: isDisabled ? (data.user?.disabledReason ?? null) : null,
+    };
   }, [getAuthHeaders]);
 
   const bootstrapUserProfile = useCallback(async (requestedRole: Exclude<UserRole, null>) => {
@@ -80,15 +89,27 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (!currentUser) {
         setRole(null);
+        setBanned(false);
+        setBanReason(null);
         setLoading(false);
         return;
       }
 
       try {
-        const resolvedRole = await fetchMyRole(currentUser);
-        setRole(resolvedRole ?? null);
+        const result = await fetchMyRole(currentUser);
+        if (result === null) {
+          setRole(null);
+          setBanned(false);
+          setBanReason(null);
+        } else {
+          setRole(result.role);
+          setBanned(result.banned);
+          setBanReason(result.banReason);
+        }
       } catch {
         setRole(null);
+        setBanned(false);
+        setBanReason(null);
       }
 
       setLoading(false);
@@ -100,6 +121,8 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const value = {
     user,
     role,
+    banned,
+    banReason,
     loading,
     firebaseConfigured: Boolean(auth),
     createUser: (email: string, password: string) =>

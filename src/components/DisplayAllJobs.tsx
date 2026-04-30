@@ -89,6 +89,7 @@ function buildDraft(job: Job): EditDraft {
 function JobCard({
   job,
   isOwner,
+  isAdmin,
   isEditing,
   draft,
   onDraftChange,
@@ -101,6 +102,7 @@ function JobCard({
 }: {
   job: Job;
   isOwner: boolean;
+  isAdmin: boolean;
   isEditing: boolean;
   draft: EditDraft | null;
   onDraftChange: (field: keyof EditDraft, value: string) => void;
@@ -200,7 +202,7 @@ function JobCard({
               </button>
             </Link>
 
-            {isOwner && !isEditing && (
+            {(isOwner || isAdmin) && !isEditing && (
               <div style={{ display: "flex", gap: 8 }}>
                 <button className="btn" onClick={onStartEdit}>Edit</button>
                 <button className="btn" onClick={onDelete} disabled={deleting}>
@@ -226,6 +228,7 @@ function JobCard({
 
 function DisplayAllJobs() {
   const { user, role } = useAuth();
+  const isAdmin = role === "admin";
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -387,20 +390,42 @@ function DisplayAllJobs() {
       return;
     }
 
-    const confirmed = window.confirm("Delete this job posting?");
-    if (!confirmed) {
+    setActionError(null);
+
+    if (isAdmin) {
+      const reason = window.prompt("Reason for removing this posting (required):");
+      if (!reason?.trim()) return;
+      try {
+        setDeletingJobId(jobId);
+        const token = await user.getIdToken();
+        const response = await fetch(`/api/admin/jobs/${jobId}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ reason: reason.trim() }),
+        });
+        if (!response.ok) {
+          const body = await response.json().catch(() => null);
+          throw new Error(body?.error || "Failed to delete job.");
+        }
+        setJobs((current) => current.filter((job) => job._id !== jobId));
+        if (editingJobId === jobId) setEditingJobId(null);
+      } catch (deleteError) {
+        setActionError(deleteError instanceof Error ? deleteError.message : "Failed to delete job.");
+      } finally {
+        setDeletingJobId(null);
+      }
       return;
     }
 
+    const confirmed = window.confirm("Delete this job posting?");
+    if (!confirmed) return;
+
     try {
       setDeletingJobId(jobId);
-      setActionError(null);
       const token = await user.getIdToken();
       const response = await fetch(`/api/employer/jobs/${jobId}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!response.ok) {
@@ -415,9 +440,7 @@ function DisplayAllJobs() {
         next.delete(jobId);
         return next;
       });
-      if (editingJobId === jobId) {
-        setEditingJobId(null);
-      }
+      if (editingJobId === jobId) setEditingJobId(null);
     } catch (deleteError) {
       setActionError(deleteError instanceof Error ? deleteError.message : "Failed to delete job.");
     } finally {
@@ -467,6 +490,7 @@ function DisplayAllJobs() {
                 key={job._id}
                 job={job}
                 isOwner={isOwner}
+                isAdmin={isAdmin}
                 isEditing={isEditing}
                 draft={editDrafts[job._id] ?? null}
                 onDraftChange={(field, value) => updateDraft(job._id, field, value)}

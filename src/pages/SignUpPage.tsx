@@ -9,7 +9,7 @@ import "../css/Page.css"
 import "../css/App.css"
 
 function Signup() {
-  const { createUser, updateUserProfile, bootstrapUserProfile, firebaseConfigured, user } = useAuth();
+  const { createUser, updateUserProfile, bootstrapUserProfile, deleteAccount, firebaseConfigured, user } = useAuth();
   const navigate = useNavigate();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
@@ -32,6 +32,7 @@ function Signup() {
 
       navigate(ROUTES.DASHBOARD, { replace: true });
     } catch (err) {
+      await deleteAccount().catch(() => null);
       const message = err instanceof Error ? err.message : "Signup failed";
       setError(message);
     }
@@ -156,6 +157,34 @@ function Signup() {
                     style={{ display: "none" }}
                   />
                   Employer
+                </label>
+
+                {/* Admin Styling */}
+                <label style={{
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  padding: "10px 13px",
+                  borderRadius: 20,
+                  border: `1.5px solid ${role === "admin" ? "var(--button-heavy)" : "rgba(255,255,255,0.5)"}`,
+                  background: role === "admin" ? "var(--button-light)" : "rgba(255,255,255,0.55)",
+                  cursor: "pointer",
+                  fontSize: "0.95rem",
+                  fontWeight: 600,
+                  color: "var(--text-1)",
+                  transition: "all 0.15s",
+                }}>
+                  <input
+                    type="radio"
+                    name="role"
+                    value="admin"
+                    checked={role === "admin"}
+                    onChange={() => setRole("admin")}
+                    style={{ display: "none" }}
+                  />
+                  Admin
                 </label>
               </div>
             </div>

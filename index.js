@@ -1075,7 +1075,6 @@ app.patch("/api/users/me", authenticateRequest, loadCurrentUser, async (req, res
   }
 });
 
-
 app.delete(
   "/api/users/me",
   authenticateRequest,
@@ -1176,12 +1175,18 @@ app.delete(
           }
         );
 
+      const employerUser = job.employerUid
+        ? await req.db.collection("users").findOne({ _id: job.employerUid }, { projection: { email: 1 } })
+        : null;
+
       await req.db.collection("moderation_logs").insertOne({
         action: "delete_job",
         targetType: "job",
         targetId: req.params.id,
         targetUid: job.employerUid ?? null,
+        targetEmail: employerUser?.email ?? "",
         performedByUid: req.authUser.uid,
+        performedByEmail: req.currentUser?.email ?? req.authUser.email ?? "",
         reason,
         messageToUser: messageToUser ?? "",
         createdAt: getNow(),
@@ -1229,6 +1234,7 @@ app.patch(
       }
 
       if (action === "disable") {
+        const now = getNow();
         await req.db.collection("users").updateOne(
           { _id: targetUid },
           {
@@ -1236,26 +1242,122 @@ app.patch(
               status: "disabled",
               disabledReason: reason,
               disabledBy: req.authUser.uid,
-              updatedAt: getNow(),
+              updatedAt: now,
             },
           }
         );
+
+        const targetRole = normalizeRole(targetUser.role);
+
+        if (targetRole === USER_ROLES.JOB_SEEKER) {
+          const apps = await req.db.collection("applications")
+            .find({ $or: [{ jobSeekerUid: targetUid }, { applicantId: targetUid }] })
+            .toArray();
+          if (apps.length > 0) {
+            await req.db.collection("archived_applications").insertMany(
+              apps.map((a) => ({ ...a, bannedUserId: targetUid, archivedAt: now }))
+            );
+            await req.db.collection("applications").deleteMany({
+              $or: [{ jobSeekerUid: targetUid }, { applicantId: targetUid }],
+            });
+          }
+        }
+
+        if (targetRole === USER_ROLES.EMPLOYER) {
+          const employerJobs = await req.db.collection("jobs")
+            .find({ employerUid: targetUid })
+            .toArray();
+          if (employerJobs.length > 0) {
+            const jobIdStrings = employerJobs.map((j) => String(j._id));
+
+            const jobApps = await req.db.collection("applications")
+              .find({ jobId: { $in: jobIdStrings } })
+              .toArray();
+            if (jobApps.length > 0) {
+              await req.db.collection("archived_applications").insertMany(
+                jobApps.map((a) => ({ ...a, bannedUserId: targetUid, archivedAt: now }))
+              );
+              await req.db.collection("applications").deleteMany({ jobId: { $in: jobIdStrings } });
+            }
+
+            await req.db.collection("archived_jobs").insertMany(
+              employerJobs.map((j) => ({ ...j, bannedUserId: targetUid, archivedAt: now }))
+            );
+
+            for (const job of employerJobs) {
+              if (job.idCode) {
+                await req.db.collection("companies").updateMany(
+                  { $or: [{ jobs: job.idCode }, { jobIds: job.idCode }] },
+                  {
+                    $pull: { jobs: job.idCode, jobIds: job.idCode },
+                    $set: { updatedAt: now },
+                    $inc: { jobCount: -1 },
+                  }
+                );
+              }
+            }
+
+            await req.db.collection("jobs").deleteMany({ employerUid: targetUid });
+          }
+        }
       }
 
       if (action === "activate") {
+        const now = getNow();
         await req.db.collection("users").updateOne(
           { _id: targetUid },
           {
-            $set: {
-              status: "active",
-              updatedAt: getNow(),
-            },
-            $unset: {
-              disabledReason: "",
-              disabledBy: "",
-            },
+            $set: { status: "active", updatedAt: now },
+            $unset: { disabledReason: "", disabledBy: "" },
           }
         );
+
+        const targetRole = normalizeRole(targetUser.role);
+
+        if (targetRole === USER_ROLES.JOB_SEEKER) {
+          const archived = await req.db.collection("archived_applications")
+            .find({ bannedUserId: targetUid })
+            .toArray();
+          if (archived.length > 0) {
+            const restored = archived.map(({ bannedUserId, archivedAt, ...rest }) => rest);
+            await req.db.collection("applications").insertMany(restored);
+            await req.db.collection("archived_applications").deleteMany({ bannedUserId: targetUid });
+          }
+        }
+
+        if (targetRole === USER_ROLES.EMPLOYER) {
+          const archivedJobs = await req.db.collection("archived_jobs")
+            .find({ bannedUserId: targetUid })
+            .toArray();
+          if (archivedJobs.length > 0) {
+            const restoredJobs = archivedJobs.map(({ bannedUserId, archivedAt, ...rest }) => rest);
+            await req.db.collection("jobs").insertMany(restoredJobs);
+
+            for (const job of archivedJobs) {
+              if (job.idCode && job.companyId) {
+                await req.db.collection("companies").updateMany(
+                  { companyId: job.companyId },
+                  {
+                    $addToSet: { jobs: job.idCode, jobIds: job.idCode },
+                    $set: { updatedAt: now },
+                    $inc: { jobCount: 1 },
+                  }
+                );
+              }
+            }
+
+            await req.db.collection("archived_jobs").deleteMany({ bannedUserId: targetUid });
+          }
+
+          const archivedApps = await req.db.collection("archived_applications")
+            .find({ bannedUserId: targetUid })
+            .toArray();
+          if (archivedApps.length > 0) {
+            const restoredApps = archivedApps.map(({ bannedUserId, archivedAt, ...rest }) => rest);
+            await req.db.collection("applications").insertMany(restoredApps);
+            await req.db.collection("archived_applications").deleteMany({ bannedUserId: targetUid });
+          }
+        }
       }
 
       if (action === "remove") {
@@ -1267,13 +1369,17 @@ app.patch(
           .collection("applications")
           .deleteMany({ $or: [{ jobSeekerUid: targetUid }, { applicantId: targetUid }] });
         await req.db.collection("jobs").deleteMany({ employerUid: targetUid });
+        await req.db.collection("archived_jobs").deleteMany({ bannedUserId: targetUid });
+        await req.db.collection("archived_applications").deleteMany({ bannedUserId: targetUid });
       }
 
       await req.db.collection("moderation_logs").insertOne({
         action: `account_${action}`,
         targetType: "user",
         targetUid,
+        targetEmail: targetUser.email ?? "",
         performedByUid: req.authUser.uid,
+        performedByEmail: req.currentUser?.email ?? req.authUser.email ?? "",
         reason: reason ?? "",
         messageToUser: messageToUser ?? "",
         createdAt: getNow(),
@@ -1283,6 +1389,27 @@ app.patch(
     } catch (error) {
       console.error("Failed admin user action:", error);
       res.status(500).json({ error: "Failed admin user action." });
+    }
+  }
+);
+
+app.get(
+  "/api/admin/moderation-logs",
+  authenticateRequest,
+  loadCurrentUser,
+  requireRoles(USER_ROLES.ADMIN),
+  async (req, res) => {
+    try {
+      const logs = await req.db
+        .collection("moderation_logs")
+        .find({})
+        .sort({ createdAt: -1 })
+        .limit(100)
+        .toArray();
+      res.json(logs);
+    } catch (error) {
+      console.error("Failed to fetch moderation logs:", error);
+      res.status(500).json({ error: "Failed to fetch moderation logs." });
     }
   }
 );

@@ -6,6 +6,8 @@ export type UserRole = "admin" | "employer" | "job_seeker" | null;
 export interface AuthContextValue {
   user: User | null;
   role: UserRole;
+  banned: boolean;
+  banReason: string | null;
   loading: boolean;
   firebaseConfigured: boolean;
   createUser: (email: string, password: string) => Promise<UserCredential>;
