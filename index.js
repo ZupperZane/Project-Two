@@ -573,7 +573,7 @@ function buildProfilePatch(role, inputProfile) {
   return { updates };
 }
 
-// Accepts multipart resume upload, stores in GridFS, saves fileId to job_seeker_profiles
+// Accepts multipart resume upload, stores in GridFS, appends to resumes[] on job_seeker_profiles
 app.post(
   "/api/job-seeker/resume",
   authenticateRequest,
@@ -593,15 +593,11 @@ app.post(
       return;
     }
 
+    const label = toSafeString(req.body?.label, 100) || req.file.originalname;
+
     try {
       const db = await getDb();
       const bucket = new GridFSBucket(db, { bucketName: "resumes" });
-
-      const existing = await db.collection("resumes.files")
-        .findOne({ "metadata.uid": req.authUser.uid });
-      if (existing) {
-        await bucket.delete(existing._id);
-      }
 
       const uploadStream = bucket.openUploadStream(req.file.originalname, {
         contentType: req.file.mimetype,
@@ -616,17 +612,92 @@ app.post(
       });
 
       const fileId = uploadStream.id.toString();
+      const entry = { fileId, label, filename: req.file.originalname, uploadedAt: getNow() };
+
+      const profile = await db.collection("job_seeker_profiles").findOne(
+        { _id: req.authUser.uid },
+        { projection: { defaultResumeFileId: 1, resumes: 1 } }
+      );
+      const isFirst = !profile?.resumes?.length;
+
+      const update = { $push: { resumes: entry }, $set: { updatedAt: getNow() } };
+      if (isFirst) update.$set.defaultResumeFileId = fileId;
 
       await db.collection("job_seeker_profiles").updateOne(
         { _id: req.authUser.uid },
-        { $set: { resumeFileId: fileId, updatedAt: getNow() } },
+        update,
         { upsert: true }
       );
 
-      res.status(201).json({ fileId });
+      res.status(201).json({ entry, isDefault: isFirst });
     } catch (error) {
       console.error("Failed to upload resume:", error);
       res.status(500).json({ error: "Failed to upload resume." });
+    }
+  }
+);
+
+app.delete(
+  "/api/job-seeker/resume/:fileId",
+  authenticateRequest,
+  loadCurrentUser,
+  requireRoles(USER_ROLES.JOB_SEEKER),
+  async (req, res) => {
+    const { fileId } = req.params;
+    if (!ObjectId.isValid(fileId)) {
+      res.status(400).json({ error: "Invalid file ID." });
+      return;
+    }
+    try {
+      const db = await getDb();
+      const bucket = new GridFSBucket(db, { bucketName: "resumes" });
+
+      await bucket.delete(new ObjectId(fileId)).catch(() => null);
+
+      const profile = await db.collection("job_seeker_profiles").findOne(
+        { _id: req.authUser.uid },
+        { projection: { defaultResumeFileId: 1 } }
+      );
+
+      const unsetDefault = profile?.defaultResumeFileId === fileId;
+      const update = { $pull: { resumes: { fileId } }, $set: { updatedAt: getNow() } };
+      if (unsetDefault) update.$unset = { defaultResumeFileId: "" };
+
+      await db.collection("job_seeker_profiles").updateOne({ _id: req.authUser.uid }, update);
+
+      res.json({ deleted: true });
+    } catch (error) {
+      console.error("Failed to delete resume:", error);
+      res.status(500).json({ error: "Failed to delete resume." });
+    }
+  }
+);
+
+app.patch(
+  "/api/job-seeker/resume/:fileId/default",
+  authenticateRequest,
+  loadCurrentUser,
+  requireRoles(USER_ROLES.JOB_SEEKER),
+  async (req, res) => {
+    const { fileId } = req.params;
+    try {
+      const profile = await req.db.collection("job_seeker_profiles").findOne(
+        { _id: req.authUser.uid },
+        { projection: { resumes: 1 } }
+      );
+      const owned = profile?.resumes?.some((r) => r.fileId === fileId);
+      if (!owned) {
+        res.status(404).json({ error: "Resume not found." });
+        return;
+      }
+      await req.db.collection("job_seeker_profiles").updateOne(
+        { _id: req.authUser.uid },
+        { $set: { defaultResumeFileId: fileId, updatedAt: getNow() } }
+      );
+      res.json({ defaultResumeFileId: fileId });
+    } catch (error) {
+      console.error("Failed to set default resume:", error);
+      res.status(500).json({ error: "Failed to set default resume." });
     }
   }
 );
@@ -2129,6 +2200,9 @@ app.post(
         .collection("job_seeker_profiles")
         .findOne({ _id: req.authUser.uid });
 
+      const chosenResumeFileId = toSafeString(req.body?.resumeFileId, 100);
+      const resumeFileId = chosenResumeFileId || seekerProfile?.defaultResumeFileId || null;
+
       const dateApplied = getNow();
       const applicantId = req.authUser.uid;
 
@@ -2141,7 +2215,7 @@ app.post(
         company: job.institutionName ?? job.company ?? "",
         employerUid: job.employerUid ?? null,
         jobSeekerUid: req.authUser.uid,
-        resumeFileId: seekerProfile?.resumeFileId ?? null,
+        resumeFileId,
         documentUrl: documentUrlFromBody ?? "",
         coverLetter,
         status: "submitted",

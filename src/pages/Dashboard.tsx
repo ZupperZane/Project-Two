@@ -4,6 +4,7 @@ import useAuth from "../hooks/useAuth";
 import { ROUTES } from "../utils/constants";
 import NavbarComponent from "../components/Navbar";
 import ResumeUpload from "../components/ResumeUpload";
+import type { ResumeEntry } from "../components/ResumeUpload";
 import EmployerJobsPanel from "../components/EmployerJobsPanel";
 import "../css/Page.css";
 
@@ -44,7 +45,8 @@ type ModerationLog = {
 function Dashboard() {
   const { user, role, banned, banReason, signOutUser, deleteAccount } = useAuth();
   const navigate = useNavigate();
-  const [resumeFileId, setResumeFileId] = useState<string | null>(null);
+  const [resumes, setResumes] = useState<ResumeEntry[]>([]);
+  const [defaultResumeFileId, setDefaultResumeFileId] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<FavoriteJob[]>([]);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [adminUsersLoading, setAdminUsersLoading] = useState(false);
@@ -57,7 +59,10 @@ function Dashboard() {
     user.getIdToken().then((token) => {
       fetch("/api/job-seeker/profile", { headers: { Authorization: `Bearer ${token}` } })
         .then((r) => r.json())
-        .then((data) => setResumeFileId(data.resumeFileId ?? null))
+        .then((data) => {
+          setResumes(Array.isArray(data.resumes) ? data.resumes : []);
+          setDefaultResumeFileId(data.defaultResumeFileId ?? null);
+        })
         .catch(() => null);
 
       fetch("/api/job-seeker/favorites", { headers: { Authorization: `Bearer ${token}` } })
@@ -196,8 +201,20 @@ function Dashboard() {
               {role === "job_seeker" && (
                 <>
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    <h2 style={{ margin: 0, color: "var(--text-1)" }}>Your Resume</h2>
-                    <ResumeUpload currentFileId={resumeFileId} onUploaded={setResumeFileId} />
+                    <h2 style={{ margin: 0, color: "var(--text-1)" }}>Your Resumes</h2>
+                    <ResumeUpload
+                      resumes={resumes}
+                      defaultResumeFileId={defaultResumeFileId}
+                      onUploaded={(entry, isDefault) => {
+                        setResumes((prev) => [...prev, entry]);
+                        if (isDefault) setDefaultResumeFileId(entry.fileId);
+                      }}
+                      onDeleted={(fileId) => {
+                        setResumes((prev) => prev.filter((r) => r.fileId !== fileId));
+                        if (defaultResumeFileId === fileId) setDefaultResumeFileId(null);
+                      }}
+                      onSetDefault={(fileId) => setDefaultResumeFileId(fileId)}
+                    />
                   </div>
 
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
