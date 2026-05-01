@@ -50,30 +50,39 @@ function SearchPage() {
 
   useEffect(() => {
     if (!query) return;
-    setLoading(true);
-    setError(null);
-    setJobResults([]);
-    setEmployerResults([]);
-    
+
+    let active = true;
     const url =
       type === "jobs"
         ? `/api/jobs?search=${encodeURIComponent(query)}`
         : `/api/companies?search=${encodeURIComponent(query)}`;
 
-    fetch(url)
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
-      })
-      .then((data) => {
+    async function runSearch() {
+      setLoading(true);
+      setError(null);
+      setJobResults([]);
+      setEmployerResults([]);
+
+      try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        if (!active) return;
+
         if (type === "jobs") setJobResults(data);
         else setEmployerResults(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err.message);
-        setLoading(false);
-      });
+      } catch (err) {
+        if (active) setError(err instanceof Error ? err.message : "Search failed.");
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    void runSearch();
+
+    return () => {
+      active = false;
+    };
   }, [query, type]);
 
   const resultCount = type === "jobs" ? jobResults.length : employerResults.length;

@@ -86,10 +86,25 @@ function buildDraft(job: Job): EditDraft {
   };
 }
 
+function HeartIcon({ filled }: { filled: boolean }) {
+  return filled ? (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--neg-secondary)" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+    </svg>
+  ) : (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" xmlns="http://www.w3.org/2000/svg">
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+    </svg>
+  );
+}
+
 function JobCard({
   job,
   isOwner,
   isAdmin,
+  isJobSeeker,
+  isFavorited,
+  onToggleFavorite,
   isEditing,
   draft,
   onDraftChange,
@@ -103,6 +118,9 @@ function JobCard({
   job: Job;
   isOwner: boolean;
   isAdmin: boolean;
+  isJobSeeker: boolean;
+  isFavorited: boolean;
+  onToggleFavorite: () => void;
   isEditing: boolean;
   draft: EditDraft | null;
   onDraftChange: (field: keyof EditDraft, value: string) => void;
@@ -196,11 +214,22 @@ function JobCard({
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>
-            <Link to={`/jobs/${job._id}`}>
-              <button className="btn" style={{ padding: "12px 20px", color: "var(--text-2)" }}>
-                View Details
-              </button>
-            </Link>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              {isJobSeeker && (
+                <button
+                  onClick={onToggleFavorite}
+                  style={{ background: "none", border: "none", cursor: "pointer", padding: 6, color: "var(--text-1)", opacity: isFavorited ? 1 : 0.45, lineHeight: 0 }}
+                  title={isFavorited ? "Remove from saved" : "Save job"}
+                >
+                  <HeartIcon filled={isFavorited} />
+                </button>
+              )}
+              <Link to={`/jobs/${job._id}`}>
+                <button className="btn" style={{ padding: "12px 20px", color: "var(--text-2)" }}>
+                  View Details
+                </button>
+              </Link>
+            </div>
 
             {(isOwner || isAdmin) && !isEditing && (
               <div style={{ display: "flex", gap: 8 }}>
@@ -229,10 +258,12 @@ function JobCard({
 function DisplayAllJobs() {
   const { user, role } = useAuth();
   const isAdmin = role === "admin";
+  const isJobSeeker = role === "job_seeker";
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [ownerJobIds, setOwnerJobIds] = useState<Set<string>>(new Set());
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [editingJobId, setEditingJobId] = useState<string | null>(null);
   const [editDrafts, setEditDrafts] = useState<Record<string, EditDraft>>({});
   const [savingJobId, setSavingJobId] = useState<string | null>(null);
@@ -286,6 +317,42 @@ function DisplayAllJobs() {
         setOwnerJobIds(new Set());
       });
   }, [role, user]);
+
+  useEffect(() => {
+    if (role !== "job_seeker" || !user) {
+      setFavoriteIds(new Set());
+      return;
+    }
+    user.getIdToken()
+      .then((token) => fetch("/api/job-seeker/favorites", { headers: { Authorization: `Bearer ${token}` } }))
+      .then((r) => r.json())
+      .then((data: Job[]) => setFavoriteIds(new Set(Array.isArray(data) ? data.map((j) => j._id) : [])))
+      .catch(() => setFavoriteIds(new Set()));
+  }, [role, user]);
+
+  const toggleFavorite = async (jobId: string) => {
+    if (!user) return;
+    const isFav = favoriteIds.has(jobId);
+    const token = await user.getIdToken();
+    const method = isFav ? "DELETE" : "POST";
+    setFavoriteIds((prev) => {
+      const next = new Set(prev);
+      if (isFav) next.delete(jobId);
+      else next.add(jobId);
+      return next;
+    });
+    fetch(`/api/job-seeker/favorites/${jobId}`, {
+      method,
+      headers: { Authorization: `Bearer ${token}` },
+    }).catch(() => {
+      setFavoriteIds((prev) => {
+        const next = new Set(prev);
+        if (isFav) next.add(jobId);
+        else next.delete(jobId);
+        return next;
+      });
+    });
+  };
 
   const sortedJobs = useMemo(() => jobs, [jobs]);
 
@@ -481,7 +548,7 @@ function DisplayAllJobs() {
 
       {!loading && !error && jobs.length > 0 && (
         <div className="job-grid">
-          {sortedJobs.slice(0, 16).map((job) => {
+          {sortedJobs.map((job) => {
             const isOwner = ownerJobIds.has(job._id);
             const isEditing = editingJobId === job._id;
 
@@ -491,6 +558,9 @@ function DisplayAllJobs() {
                 job={job}
                 isOwner={isOwner}
                 isAdmin={isAdmin}
+                isJobSeeker={isJobSeeker}
+                isFavorited={favoriteIds.has(job._id)}
+                onToggleFavorite={() => toggleFavorite(job._id)}
                 isEditing={isEditing}
                 draft={editDrafts[job._id] ?? null}
                 onDraftChange={(field, value) => updateDraft(job._id, field, value)}

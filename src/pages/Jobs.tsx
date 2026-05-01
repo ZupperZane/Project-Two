@@ -13,8 +13,8 @@ function Jobs(){
         <div className="page">
             <NavbarComponent/>
             {role === "employer" && (
-                <div style={{ display: "flex", justifyContent: "center", marginBottom: "1rem" }}>
-                    <Link to="/jobs/new" className="btn btn-primary">Post Job</Link>
+                <div className="page-toolbar">
+                    <Link to="/jobs/new" className="btn">Post Job</Link>
                 </div>
             )}
             <DisplayAllJobs/>

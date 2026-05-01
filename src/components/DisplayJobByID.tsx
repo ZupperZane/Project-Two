@@ -58,12 +58,36 @@ function formatSalary(job: Job) {
   return "Not listed";
 }
 
+type ResumeEntry = { fileId: string; label: string; filename: string };
+
 function QuickApply({ jobId }: { jobId: string }) {
   const { user, role } = useAuth();
   const [status, setStatus] = useState<"idle" | "loading" | "applied" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
+  const [resumes, setResumes] = useState<ResumeEntry[]>([]);
+  const [defaultResumeFileId, setDefaultResumeFileId] = useState<string | null>(null);
+  const [selectedResumeFileId, setSelectedResumeFileId] = useState<string>("");
+  const [profileLoaded, setProfileLoaded] = useState(false);
+
+  useEffect(() => {
+    if (role !== "job_seeker" || !user) return;
+    user.getIdToken().then((token) =>
+      fetch("/api/job-seeker/profile", { headers: { Authorization: `Bearer ${token}` } })
+        .then((r) => r.json())
+        .then((data) => {
+          const list: ResumeEntry[] = Array.isArray(data.resumes) ? data.resumes : [];
+          setResumes(list);
+          const def = data.defaultResumeFileId ?? null;
+          setDefaultResumeFileId(def);
+          setSelectedResumeFileId(def ?? list[0]?.fileId ?? "");
+          setProfileLoaded(true);
+        })
+        .catch(() => setProfileLoaded(true))
+    );
+  }, [role, user]);
 
   if (role !== "job_seeker") return null;
+  if (status === "applied") return <p style={{ fontWeight: 600, color: "var(--button-heavy)" }}>Applied ✓</p>;
 
   const handleApply = async () => {
     if (!user) return;
@@ -72,11 +96,9 @@ function QuickApply({ jobId }: { jobId: string }) {
     const res = await fetch("/api/job-seeker/applications", {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ jobId }),
+      body: JSON.stringify({ jobId, resumeFileId: selectedResumeFileId || undefined }),
     });
-    if (res.status === 409) {
-      setStatus("applied");
-    } else if (res.ok) {
+    if (res.status === 409 || res.ok) {
       setStatus("applied");
     } else {
       const data = await res.json().catch(() => null);
@@ -85,14 +107,40 @@ function QuickApply({ jobId }: { jobId: string }) {
     }
   };
 
-  if (status === "applied") return <p style={{ fontWeight: 600, color: "var(--button-heavy)" }}>Applied ✓</p>;
-
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <button className="btn" onClick={handleApply} disabled={status === "loading"}
-        style={{ color: "var(--text-2)" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {profileLoaded && resumes.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <label style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-1)", opacity: 0.55 }}>
+            Resume to send
+          </label>
+          <select
+            value={selectedResumeFileId}
+            onChange={(e) => setSelectedResumeFileId(e.target.value)}
+            style={{
+              padding: "8px 10px",
+              borderRadius: 8,
+              border: "1.5px solid rgba(255,255,255,0.3)",
+              background: "rgba(255,255,255,0.07)",
+              color: "var(--text-1)",
+              fontSize: "0.88rem",
+              cursor: "pointer",
+            }}
+          >
+            {resumes.map((r) => (
+              <option key={r.fileId} value={r.fileId}>
+                {r.label}{r.fileId === defaultResumeFileId ? " (default)" : ""}
+              </option>
+            ))}
+            <option value="">No resume</option>
+          </select>
+        </div>
+      )}
+
+      <button className="btn" onClick={handleApply} disabled={status === "loading"} style={{ color: "var(--text-2)" }}>
         {status === "loading" ? "Applying..." : "Quick Apply"}
       </button>
+
       {status === "error" && <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--neg-secondary)" }}>{errorMsg}</p>}
     </div>
   );

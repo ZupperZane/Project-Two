@@ -13,6 +13,7 @@ import JobID from "../pages/JobID";
 
 import Login from "../pages/LoginPage";
 import Signup from "../pages/SignUpPage";
+import ResetPasswordPage from "../pages/ResetPasswordPage";
 
 import Dashboard from "../pages/Dashboard";
 import PrivateRoute from "./PrivateRoute";
@@ -21,6 +22,8 @@ import DisplayAllJobs from "../components/DisplayAllJobs";
 import SearchPage from "../pages/SearchPage";
 
 import CreatePostPage from "../pages/CreatePost";
+import ResetPassword from "../pages/ResetPassword";
+import SelectRolePage from "../pages/SelectRolePage";
 
 
 const mainRouter: RouteObject[] = [
@@ -70,12 +73,24 @@ const mainRouter: RouteObject[] = [
         element: <Login />,
       },
       {
+        path: "reset-password",
+        element: <ResetPasswordPage />,
+      },
+      {
         path: "createPost",
         element:<Navigate to="/jobs/new" replace />
       },
       {
         path: "signup",
         element: <Signup />,
+      },
+      {
+        path: "reset-password",
+        element: <ResetPassword />,
+      },
+      {
+        path: "select-role",
+        element: <SelectRolePage />,
       },
             {
         path: "search",

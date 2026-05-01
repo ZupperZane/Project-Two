@@ -1,0 +1,56 @@
+.home-hero {
+  padding: clamp(36px, 8vh, 92px) 12px 40px;
+  gap: 42px;
+}
+
+.home-copy {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 720px;
+}
+
+.home-chip {
+  align-self: center;
+  margin: 0;
+  padding: 6px 14px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border-radius: 8px;
+  color: var(--text-1);
+  background: var(--surface-3);
+  border: 1px solid var(--surface-border);
+}
+
+.home-subcopy {
+  font-size: 1.12rem;
+  color: var(--muted-text);
+}
+
+.home-cta-row {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .home-hero {
+    gap: 30px;
+  }
+
+  .home-cta-row {
+    width: 100%;
+  }
+
+  .home-cta-row .btn {
+    width: 100%;
+  }
+
+  .home-subcopy {
+    font-size: 1rem;
+  }
+}

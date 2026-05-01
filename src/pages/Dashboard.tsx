@@ -4,8 +4,21 @@ import useAuth from "../hooks/useAuth";
 import { ROUTES } from "../utils/constants";
 import NavbarComponent from "../components/Navbar";
 import ResumeUpload from "../components/ResumeUpload";
+import type { ResumeEntry } from "../components/ResumeUpload";
 import EmployerJobsPanel from "../components/EmployerJobsPanel";
 import "../css/Page.css";
+
+type FavoriteJob = {
+  _id: string;
+  jobTitle?: string;
+  name?: string;
+  company?: string;
+  institutionName?: string;
+  location?: string;
+  employmentType?: string;
+  salary?: number | null;
+  applicationDeadline?: string;
+};
 
 type AdminUser = {
   uid: string;
@@ -32,7 +45,9 @@ type ModerationLog = {
 function Dashboard() {
   const { user, role, banned, banReason, signOutUser, deleteAccount } = useAuth();
   const navigate = useNavigate();
-  const [resumeFileId, setResumeFileId] = useState<string | null>(null);
+  const [resumes, setResumes] = useState<ResumeEntry[]>([]);
+  const [defaultResumeFileId, setDefaultResumeFileId] = useState<string | null>(null);
+  const [favorites, setFavorites] = useState<FavoriteJob[]>([]);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [adminUsersLoading, setAdminUsersLoading] = useState(false);
   const [adminActionError, setAdminActionError] = useState<string | null>(null);
@@ -41,14 +56,20 @@ function Dashboard() {
 
   useEffect(() => {
     if (role !== "job_seeker" || !user) return;
-    user.getIdToken().then((token) =>
-      fetch("/api/job-seeker/profile", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+    user.getIdToken().then((token) => {
+      fetch("/api/job-seeker/profile", { headers: { Authorization: `Bearer ${token}` } })
         .then((r) => r.json())
-        .then((data) => setResumeFileId(data.resumeFileId ?? null))
-        .catch(() => null)
-    );
+        .then((data) => {
+          setResumes(Array.isArray(data.resumes) ? data.resumes : []);
+          setDefaultResumeFileId(data.defaultResumeFileId ?? null);
+        })
+        .catch(() => null);
+
+      fetch("/api/job-seeker/favorites", { headers: { Authorization: `Bearer ${token}` } })
+        .then((r) => r.json())
+        .then((data) => setFavorites(Array.isArray(data) ? data : []))
+        .catch(() => null);
+    });
   }, [role, user]);
 
   useEffect(() => {
@@ -73,6 +94,29 @@ function Dashboard() {
         .catch(() => setModLogsLoading(false));
     });
   }, [role, user]);
+
+  const downloadFavoritesCSV = () => {
+    const header = ["Title", "Company", "Location", "Employment Type", "Salary", "Application Deadline", "URL"];
+    const rows = favorites.map((job) => [
+      job.jobTitle || job.name || "",
+      job.institutionName || job.company || "",
+      job.location || "",
+      job.employmentType || "",
+      job.salary != null ? `$${job.salary.toLocaleString()}` : "",
+      job.applicationDeadline || "",
+      `${window.location.origin}/jobs/${job._id}`,
+    ]);
+    const csv = [header, ...rows]
+      .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "saved-jobs.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const handleDelete = async () => {
     if (!confirm("Permanently delete your account? This cannot be undone.")) return;
@@ -133,182 +177,208 @@ function Dashboard() {
   return (
     <div className="page">
       <NavbarComponent />
-      <div className="page-center" style={{ paddingTop: 60, paddingBottom: 60 }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 32, width: "100%", maxWidth: 600 }}>
-
-          <div>
-            <h1 style={{ margin: 0, color: "var(--text-1)" }}>Dashboard</h1>
-            <p style={{ margin: "6px 0 0", color: "var(--text-1)", opacity: 0.6, fontSize: "0.9rem", paddingTop: 40 }}>
-              {user?.email} · {role ?? "..."}
-            </p>
+      <div className="page-content narrow">
+        <div className="page-header">
+          <div className="page-header-copy">
+            <h1>Dashboard</h1>
+            <p>{user?.email} · {role ?? "..."}</p>
           </div>
-
-          {banned ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <h2 style={{ margin: 0, color: "var(--neg-secondary)" }}>Account Restricted</h2>
-              <p style={{ margin: 0, color: "var(--text-1)", opacity: 0.8, fontSize: "0.95rem" }}>
-                Your account has been restricted by an administrator
-                {banReason ? `: ${banReason}` : "."}
-              </p>
-              <button className="btn" style={{ color: "var(--text-2)", marginTop: 8, alignSelf: "flex-start" }} onClick={signOutUser}>
-                Sign Out
-              </button>
+          {!banned && (
+            <div className="action-row">
+              {role === "job_seeker" && <Link to="/jobs" className="btn">Browse Jobs</Link>}
+              {role === "employer" && <Link to="/jobs/new" className="btn">Post Job</Link>}
             </div>
-          ) : (
-            <>
-              {role === "job_seeker" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  <h2 style={{ margin: 0, color: "var(--text-1)" }}>Your Resume</h2>
-                  <ResumeUpload currentFileId={resumeFileId} onUploaded={setResumeFileId} />
-                </div>
-              )}
-
-              {role === "employer" && (
-                <>
-                  <Link to="/createPost" className="btn" style={{ color: "var(--text-2)", textAlign: "center" }}>
-                    Create Job Posting
-                  </Link>
-                  <EmployerJobsPanel />
-                </>
-              )}
-
-              {role === "admin" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                  <h2 style={{ margin: 0, color: "var(--text-1)" }}>User Management</h2>
-
-                  {adminActionError && (
-                    <p style={{ margin: 0, color: "var(--neg-secondary)", fontWeight: 600, fontSize: "0.9rem" }}>
-                      {adminActionError}
-                    </p>
-                  )}
-
-                  {adminUsersLoading && (
-                    <p style={{ margin: 0, color: "var(--text-1)", opacity: 0.6 }}>Loading users...</p>
-                  )}
-
-                  {!adminUsersLoading && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 360, overflowY: "auto", paddingRight: 4 }}>
-                      {adminUsers.map((u) => (
-                        <div key={u.uid} style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          gap: 12,
-                          padding: "14px 18px",
-                          borderRadius: 12,
-                          background: "rgba(255,255,255,0.04)",
-                          border: "1.5px solid rgba(255,255,255,0.1)",
-                        }}>
-                          <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
-                            <p style={{ margin: 0, fontWeight: 600, color: "var(--text-1)", fontSize: "0.9rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                              {u.name || u.email}
-                            </p>
-                            <p style={{ margin: 0, color: "var(--text-1)", opacity: 0.5, fontSize: "0.8rem" }}>
-                              {u.email} · {u.role}
-                              {u.status === "disabled" && (
-                                <span style={{ color: "var(--neg-secondary)", marginLeft: 6 }}>
-                                  · banned{u.disabledReason ? `: ${u.disabledReason}` : ""}
-                                </span>
-                              )}
-                            </p>
-                          </div>
-
-                          {u.uid !== user?.uid && (
-                            u.status === "disabled" ? (
-                              <button
-                                className="btn"
-                                style={{ color: "var(--text-2)", flexShrink: 0, fontSize: "0.85rem" }}
-                                onClick={() => handleUnban(u.uid)}
-                              >
-                                Unban
-                              </button>
-                            ) : (
-                              <button
-                                className="btn"
-                                style={{ color: "var(--neg-secondary)", background: "transparent", border: "1.5px solid var(--neg-secondary)", flexShrink: 0, fontSize: "0.85rem" }}
-                                onClick={() => handleBan(u.uid)}
-                              >
-                                Ban
-                              </button>
-                            )
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {role === "admin" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                  <h2 style={{ margin: 0, color: "var(--text-1)" }}>Moderation Log</h2>
-
-                  {modLogsLoading && (
-                    <p style={{ margin: 0, color: "var(--text-1)", opacity: 0.6 }}>Loading logs...</p>
-                  )}
-
-                  {!modLogsLoading && modLogs.length === 0 && (
-                    <p style={{ margin: 0, color: "var(--text-1)", opacity: 0.4, fontSize: "0.9rem" }}>No actions recorded yet.</p>
-                  )}
-
-                  {!modLogsLoading && modLogs.length > 0 && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 400, overflowY: "auto", paddingRight: 4 }}>
-                      {modLogs.map((log) => (
-                        <div key={log._id} style={{
-                          padding: "12px 18px",
-                          borderRadius: 12,
-                          background: "rgba(255,255,255,0.03)",
-                          border: "1.5px solid rgba(255,255,255,0.08)",
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: 4,
-                        }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-                            <p style={{ margin: 0, fontWeight: 700, color: "var(--text-1)", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                              {log.action.replace(/_/g, " ")}
-                            </p>
-                            <p style={{ margin: 0, color: "var(--text-1)", opacity: 0.4, fontSize: "0.78rem", whiteSpace: "nowrap" }}>
-                              {log.createdAt ? new Date(log.createdAt).toLocaleString() : ""}
-                            </p>
-                          </div>
-                          {log.reason && (
-                            <p style={{ margin: 0, color: "var(--text-1)", opacity: 0.7, fontSize: "0.82rem" }}>
-                              Reason: {log.reason}
-                            </p>
-                          )}
-                          {(log.targetEmail || log.targetUid || log.targetId) && (
-                            <p style={{ margin: 0, color: "var(--text-1)", opacity: 0.5, fontSize: "0.8rem" }}>
-                              Target: {log.targetEmail || log.targetUid || log.targetId}
-                            </p>
-                          )}
-                          {(log.performedByEmail || log.performedByUid) && (
-                            <p style={{ margin: 0, color: "var(--text-1)", opacity: 0.4, fontSize: "0.78rem" }}>
-                              By: {log.performedByEmail || log.performedByUid}
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div style={{ display: "flex", gap: 12, paddingTop: 12 }}>
-                <button className="btn" style={{ color: "var(--text-2)" }} onClick={signOutUser}>
-                  Sign Out
-                </button>
-                <button
-                  className="btn"
-                  style={{ color: "var(--neg-secondary)", background: "transparent", border: "1.5px solid var(--neg-secondary)" }}
-                  onClick={handleDelete}
-                >
-                  Delete Account
-                </button>
-              </div>
-            </>
           )}
-
         </div>
+
+        {banned ? (
+          <div className="content-panel">
+            <h2 style={{ color: "var(--neg-secondary)" }}>Account Restricted</h2>
+            <p className="muted-text">
+              Your account has been restricted by an administrator
+              {banReason ? `: ${banReason}` : "."}
+            </p>
+            <button className="btn" style={{ alignSelf: "flex-start" }} onClick={signOutUser}>
+              Sign Out
+            </button>
+          </div>
+        ) : (
+          <div className="dashboard-grid">
+            {role === "job_seeker" && (
+              <>
+                <div className="content-panel compact">
+                  <div className="form-section-title">
+                    <h2>Your Resumes</h2>
+                    <p className="muted-text">Upload multiple resumes and set your default for quick apply.</p>
+                  </div>
+                  <ResumeUpload
+                    resumes={resumes}
+                    defaultResumeFileId={defaultResumeFileId}
+                    onUploaded={(entry, isDefault) => {
+                      setResumes((prev) => [...prev, entry]);
+                      if (isDefault) setDefaultResumeFileId(entry.fileId);
+                    }}
+                    onDeleted={(fileId) => {
+                      setResumes((prev) => prev.filter((r) => r.fileId !== fileId));
+                      if (defaultResumeFileId === fileId) setDefaultResumeFileId(null);
+                    }}
+                    onSetDefault={(fileId) => setDefaultResumeFileId(fileId)}
+                  />
+                </div>
+
+                <div className="content-panel compact">
+                  <div className="action-row" style={{ justifyContent: "space-between" }}>
+                    <h2 style={{ margin: 0 }}>
+                      Saved Jobs
+                      {favorites.length > 0 && (
+                        <span style={{ fontWeight: 500, opacity: 0.6, fontSize: "0.95rem", marginLeft: 8 }}>
+                          ({favorites.length})
+                        </span>
+                      )}
+                    </h2>
+                    {favorites.length > 0 && (
+                      <button className="btn btn-quiet" style={{ fontSize: "0.85rem" }} onClick={downloadFavoritesCSV}>
+                        Download CSV
+                      </button>
+                    )}
+                  </div>
+
+                  {favorites.length === 0 ? (
+                    <p className="muted-text">No saved jobs yet.</p>
+                  ) : (
+                    <div className="stack-list" style={{ maxHeight: 320, overflowY: "auto", paddingRight: 4 }}>
+                      {favorites.map((job) => (
+                        <div key={job._id} className="applicant-card" style={{ flexDirection: "column", gap: 2 }}>
+                          <p style={{ margin: 0, fontWeight: 700, color: "var(--text-1)", fontSize: "0.9rem" }}>
+                            {job.jobTitle || job.name}
+                          </p>
+                          <p style={{ margin: 0, color: "var(--muted-text)", fontSize: "0.82rem" }}>
+                            {[job.institutionName || job.company, job.location].filter(Boolean).join(" · ")}
+                          </p>
+                          {job.applicationDeadline && (
+                            <p style={{ margin: 0, color: "var(--neg-secondary)", fontSize: "0.78rem", fontWeight: 700 }}>
+                              Apply by: {job.applicationDeadline}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {role === "employer" && (
+              <>
+                <div className="content-panel compact">
+                  <div className="form-section-title">
+                    <h2>Employer Tools</h2>
+                    <p className="muted-text">Create listings and monitor candidates from one place.</p>
+                  </div>
+                  <div className="action-row">
+                    <Link to="/jobs/new" className="btn">Create Job Posting</Link>
+                    <Link to="/jobs" className="btn btn-quiet">View All Jobs</Link>
+                  </div>
+                </div>
+                <EmployerJobsPanel />
+              </>
+            )}
+
+            {role === "admin" && (
+              <div className="content-panel compact">
+                <h2>User Management</h2>
+
+                {adminActionError && (
+                  <p style={{ margin: 0, color: "var(--neg-secondary)", fontWeight: 700, fontSize: "0.9rem" }}>
+                    {adminActionError}
+                  </p>
+                )}
+
+                {adminUsersLoading && <p className="muted-text">Loading users...</p>}
+
+                {!adminUsersLoading && (
+                  <div className="admin-list" style={{ maxHeight: 360, overflowY: "auto", paddingRight: 4 }}>
+                    {adminUsers.map((u) => (
+                      <div key={u.uid} className="admin-list-item" style={{ alignItems: "center", justifyContent: "space-between" }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+                          <p style={{ margin: 0, fontWeight: 700, color: "var(--text-1)", fontSize: "0.9rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {u.name || u.email}
+                          </p>
+                          <p style={{ margin: 0, color: "var(--muted-text)", fontSize: "0.8rem" }}>
+                            {u.email} · {u.role}
+                            {u.status === "disabled" && (
+                              <span style={{ color: "var(--neg-secondary)", marginLeft: 6 }}>
+                                · banned{u.disabledReason ? `: ${u.disabledReason}` : ""}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+
+                        {u.uid !== user?.uid && (
+                          u.status === "disabled" ? (
+                            <button className="btn" style={{ flexShrink: 0, fontSize: "0.85rem" }} onClick={() => handleUnban(u.uid)}>
+                              Unban
+                            </button>
+                          ) : (
+                            <button className="btn danger-button" style={{ flexShrink: 0, fontSize: "0.85rem" }} onClick={() => handleBan(u.uid)}>
+                              Ban
+                            </button>
+                          )
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {role === "admin" && (
+              <div className="content-panel compact">
+                <h2>Moderation Log</h2>
+
+                {modLogsLoading && <p className="muted-text">Loading logs...</p>}
+                {!modLogsLoading && modLogs.length === 0 && <p className="muted-text">No actions recorded yet.</p>}
+
+                {!modLogsLoading && modLogs.length > 0 && (
+                  <div className="log-list" style={{ maxHeight: 400, overflowY: "auto", paddingRight: 4 }}>
+                    {modLogs.map((log) => (
+                      <div key={log._id} className="log-item" style={{ flexDirection: "column", gap: 4 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                          <p style={{ margin: 0, fontWeight: 700, color: "var(--text-1)", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                            {log.action.replace(/_/g, " ")}
+                          </p>
+                          <p style={{ margin: 0, color: "var(--muted-text)", fontSize: "0.78rem", whiteSpace: "nowrap" }}>
+                            {log.createdAt ? new Date(log.createdAt).toLocaleString() : ""}
+                          </p>
+                        </div>
+                        {log.reason && (
+                          <p style={{ margin: 0, color: "var(--muted-text)", fontSize: "0.82rem" }}>
+                            Reason: {log.reason}
+                          </p>
+                        )}
+                        {(log.targetEmail || log.targetUid || log.targetId) && (
+                          <p style={{ margin: 0, color: "var(--muted-text)", fontSize: "0.8rem" }}>
+                            Target: {log.targetEmail || log.targetUid || log.targetId}
+                          </p>
+                        )}
+                        {(log.performedByEmail || log.performedByUid) && (
+                          <p style={{ margin: 0, color: "var(--muted-text)", fontSize: "0.78rem" }}>
+                            By: {log.performedByEmail || log.performedByUid}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="action-row dashboard-footer">
+              <button className="btn btn-quiet" onClick={signOutUser}>Sign Out</button>
+              <button className="btn danger-button" onClick={handleDelete}>Delete Account</button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
