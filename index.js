@@ -2206,6 +2206,84 @@ app.get(
   }
 );
 
+app.get(
+  "/api/job-seeker/favorites",
+  authenticateRequest,
+  loadCurrentUser,
+  requireRoles(USER_ROLES.JOB_SEEKER),
+  async (req, res) => {
+    try {
+      const profile = await req.db
+        .collection("job_seeker_profiles")
+        .findOne({ _id: req.authUser.uid }, { projection: { favorites: 1 } });
+
+      const favoriteIds = (profile?.favorites ?? [])
+        .filter((id) => ObjectId.isValid(id))
+        .map((id) => new ObjectId(id));
+
+      if (favoriteIds.length === 0) {
+        res.json([]);
+        return;
+      }
+
+      const jobs = await req.db
+        .collection("jobs")
+        .find({ _id: { $in: favoriteIds } })
+        .toArray();
+
+      res.json(jobs.map(mapJobDocument));
+    } catch (error) {
+      console.error("Failed to fetch favorites:", error);
+      res.status(500).json({ error: "Failed to fetch favorites." });
+    }
+  }
+);
+
+app.post(
+  "/api/job-seeker/favorites/:jobId",
+  authenticateRequest,
+  loadCurrentUser,
+  requireRoles(USER_ROLES.JOB_SEEKER),
+  async (req, res) => {
+    const { jobId } = req.params;
+    if (!ObjectId.isValid(jobId)) {
+      res.status(400).json({ error: "Invalid job id." });
+      return;
+    }
+    try {
+      await req.db.collection("job_seeker_profiles").updateOne(
+        { _id: req.authUser.uid },
+        { $addToSet: { favorites: jobId } },
+        { upsert: true }
+      );
+      res.json({ favorited: true });
+    } catch (error) {
+      console.error("Failed to add favorite:", error);
+      res.status(500).json({ error: "Failed to add favorite." });
+    }
+  }
+);
+
+app.delete(
+  "/api/job-seeker/favorites/:jobId",
+  authenticateRequest,
+  loadCurrentUser,
+  requireRoles(USER_ROLES.JOB_SEEKER),
+  async (req, res) => {
+    const { jobId } = req.params;
+    try {
+      await req.db.collection("job_seeker_profiles").updateOne(
+        { _id: req.authUser.uid },
+        { $pull: { favorites: jobId } }
+      );
+      res.json({ favorited: false });
+    } catch (error) {
+      console.error("Failed to remove favorite:", error);
+      res.status(500).json({ error: "Failed to remove favorite." });
+    }
+  }
+);
+
 app.get("/{*path}", (req, res) => {
   res.sendFile(path.join(__dirname, "dist", "index.html"));
 });

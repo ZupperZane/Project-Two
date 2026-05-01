@@ -7,6 +7,18 @@ import ResumeUpload from "../components/ResumeUpload";
 import EmployerJobsPanel from "../components/EmployerJobsPanel";
 import "../css/Page.css";
 
+type FavoriteJob = {
+  _id: string;
+  jobTitle?: string;
+  name?: string;
+  company?: string;
+  institutionName?: string;
+  location?: string;
+  employmentType?: string;
+  salary?: number | null;
+  applicationDeadline?: string;
+};
+
 type AdminUser = {
   uid: string;
   name: string;
@@ -33,6 +45,7 @@ function Dashboard() {
   const { user, role, banned, banReason, signOutUser, deleteAccount } = useAuth();
   const navigate = useNavigate();
   const [resumeFileId, setResumeFileId] = useState<string | null>(null);
+  const [favorites, setFavorites] = useState<FavoriteJob[]>([]);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [adminUsersLoading, setAdminUsersLoading] = useState(false);
   const [adminActionError, setAdminActionError] = useState<string | null>(null);
@@ -41,14 +54,17 @@ function Dashboard() {
 
   useEffect(() => {
     if (role !== "job_seeker" || !user) return;
-    user.getIdToken().then((token) =>
-      fetch("/api/job-seeker/profile", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+    user.getIdToken().then((token) => {
+      fetch("/api/job-seeker/profile", { headers: { Authorization: `Bearer ${token}` } })
         .then((r) => r.json())
         .then((data) => setResumeFileId(data.resumeFileId ?? null))
-        .catch(() => null)
-    );
+        .catch(() => null);
+
+      fetch("/api/job-seeker/favorites", { headers: { Authorization: `Bearer ${token}` } })
+        .then((r) => r.json())
+        .then((data) => setFavorites(Array.isArray(data) ? data : []))
+        .catch(() => null);
+    });
   }, [role, user]);
 
   useEffect(() => {
@@ -73,6 +89,27 @@ function Dashboard() {
         .catch(() => setModLogsLoading(false));
     });
   }, [role, user]);
+
+  const downloadFavoritesCSV = () => {
+    const header = ["Title", "Company", "Location", "Employment Type", "Salary", "Application Deadline", "URL"];
+    const rows = favorites.map((job) => [
+      job.jobTitle || job.name || "",
+      job.institutionName || job.company || "",
+      job.location || "",
+      job.employmentType || "",
+      job.salary != null ? `$${job.salary.toLocaleString()}` : "",
+      job.applicationDeadline || "",
+      `${window.location.origin}/jobs/${job._id}`,
+    ]);
+    const csv = [header, ...rows].map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "saved-jobs.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const handleDelete = async () => {
     if (!confirm("Permanently delete your account? This cannot be undone.")) return;
@@ -157,10 +194,55 @@ function Dashboard() {
           ) : (
             <>
               {role === "job_seeker" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  <h2 style={{ margin: 0, color: "var(--text-1)" }}>Your Resume</h2>
-                  <ResumeUpload currentFileId={resumeFileId} onUploaded={setResumeFileId} />
-                </div>
+                <>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    <h2 style={{ margin: 0, color: "var(--text-1)" }}>Your Resume</h2>
+                    <ResumeUpload currentFileId={resumeFileId} onUploaded={setResumeFileId} />
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                      <h2 style={{ margin: 0, color: "var(--text-1)" }}>
+                        Saved Jobs{favorites.length > 0 && <span style={{ fontWeight: 400, opacity: 0.5, fontSize: "1rem", marginLeft: 8 }}>({favorites.length})</span>}
+                      </h2>
+                      {favorites.length > 0 && (
+                        <button className="btn" style={{ color: "var(--text-2)", fontSize: "0.85rem" }} onClick={downloadFavoritesCSV}>
+                          Download CSV
+                        </button>
+                      )}
+                    </div>
+
+                    {favorites.length === 0 ? (
+                      <p style={{ margin: 0, color: "var(--text-1)", opacity: 0.4, fontSize: "0.9rem" }}>No saved jobs yet.</p>
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 320, overflowY: "auto", paddingRight: 4 }}>
+                        {favorites.map((job) => (
+                          <div key={job._id} style={{
+                            padding: "12px 16px",
+                            borderRadius: 12,
+                            background: "rgba(255,255,255,0.04)",
+                            border: "1.5px solid rgba(255,255,255,0.1)",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 2,
+                          }}>
+                            <p style={{ margin: 0, fontWeight: 600, color: "var(--text-1)", fontSize: "0.9rem" }}>
+                              {job.jobTitle || job.name}
+                            </p>
+                            <p style={{ margin: 0, color: "var(--text-1)", opacity: 0.5, fontSize: "0.8rem" }}>
+                              {[job.institutionName || job.company, job.location].filter(Boolean).join(" · ")}
+                            </p>
+                            {job.applicationDeadline && (
+                              <p style={{ margin: 0, color: "var(--neg-secondary)", fontSize: "0.78rem", fontWeight: 600 }}>
+                                Apply by: {job.applicationDeadline}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
               )}
 
               {role === "employer" && (

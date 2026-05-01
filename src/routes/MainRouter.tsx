@@ -21,6 +21,8 @@ import DisplayAllJobs from "../components/DisplayAllJobs";
 import SearchPage from "../pages/SearchPage";
 
 import CreatePostPage from "../pages/CreatePost";
+import ResetPassword from "../pages/ResetPassword";
+import SelectRolePage from "../pages/SelectRolePage";
 
 
 const mainRouter: RouteObject[] = [
@@ -76,6 +78,14 @@ const mainRouter: RouteObject[] = [
       {
         path: "signup",
         element: <Signup />,
+      },
+      {
+        path: "reset-password",
+        element: <ResetPassword />,
+      },
+      {
+        path: "select-role",
+        element: <SelectRolePage />,
       },
             {
         path: "search",

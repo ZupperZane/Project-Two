@@ -8,17 +8,19 @@ interface PrivateRouteProps {
 }
 
 function PrivateRoute({ children }: PrivateRouteProps) {
-  const { user, loading: authLoading } = useAuth();
+  const { user, role, loading: authLoading } = useAuth();
   const location = useLocation();
 
-  // Wait for auth (and profile if role-check is needed) to resolve
   if (authLoading) {
     return null;
   }
 
-  // Guest: not logged in — send to login, preserve intended destination
   if (!user) {
     return <Navigate to={ROUTES.LOGIN} replace state={{ from: location.pathname }} />;
+  }
+
+  if (!role) {
+    return <Navigate to={ROUTES.SELECT_ROLE} replace />;
   }
 
   return <>{children}</>;
