@@ -13,6 +13,7 @@ import JobID from "../pages/JobID";
 
 import Login from "../pages/LoginPage";
 import Signup from "../pages/SignUpPage";
+import ResetPasswordPage from "../pages/ResetPasswordPage";
 
 import Dashboard from "../pages/Dashboard";
 import PrivateRoute from "./PrivateRoute";
@@ -68,6 +69,10 @@ const mainRouter: RouteObject[] = [
       {
         path: "login",
         element: <Login />,
+      },
+      {
+        path: "reset-password",
+        element: <ResetPasswordPage />,
       },
       {
         path: "createPost",

@@ -1,34 +1,53 @@
-import { Link } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import useAuth from "../hooks/useAuth";
+import { useTheme } from "../hooks/useTheme";
 import SearchBar from "./SearchBar";
 import "../css/Navbar.css";
-import "../css/index.css"
 
-function NavbarComponent(){
+function NavbarComponent() {
   const { user, role, signOutUser } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
 
   return (
-    <div className="w-full flex flex-col items-center gap-10">
-      <nav className="navbar" style={{background: "#66A1DE"}}>
+    <div className="navbar-shell">
+      <nav className="navbar">
+        <div className="brand-mark">
+          <span className="brand-dot" />
+          <span>Career Compass</span>
+        </div>
+
         <div className="nav-links">
-          <Link to="/home" className="nav-button">Home</Link>
-          <Link to="/jobs" className="nav-button">Jobs</Link>
-          <Link to="/employers" className="nav-button">Employers</Link>
+          <NavLink to="/home" className={({ isActive }) => `nav-button ${isActive ? "active" : ""}`}>Home</NavLink>
+          <NavLink to="/jobs" className={({ isActive }) => `nav-button ${isActive ? "active" : ""}`}>Jobs</NavLink>
+          <NavLink to="/employers" className={({ isActive }) => `nav-button ${isActive ? "active" : ""}`}>Employers</NavLink>
           {role === "employer" && (
-            <Link to="/jobs/new" className="nav-button">Post Job</Link>
+            <NavLink to="/jobs/new" className={({ isActive }) => `nav-button ${isActive ? "active" : ""}`}>Post Job</NavLink>
           )}
           {user ? (
             <>
-              <Link to="/dashboard" className="nav-button">Dashboard</Link>
-              <button className="nav-button" onClick={signOutUser}>Sign Out</button>
+              <NavLink to="/dashboard" className={({ isActive }) => `nav-button ${isActive ? "active" : ""}`}>Dashboard</NavLink>
+              <button className="nav-button nav-signout" onClick={signOutUser}>Sign Out</button>
             </>
           ) : (
-            <Link to="/login" className="nav-button">Login</Link>
+            <>
+              <NavLink to="/login" className={({ isActive }) => `nav-button ${isActive ? "active" : ""}`}>Login</NavLink>
+              <NavLink to="/signup" className={({ isActive }) => `nav-button ${isActive ? "active" : ""}`}>Sign Up</NavLink>
+            </>
           )}
         </div>
 
-        <SearchBar size="compact" />
-
+        <div className="nav-actions">
+          <SearchBar size="compact" />
+          <button
+            className="theme-toggle"
+            onClick={toggleTheme}
+            type="button"
+            aria-label={`Switch to ${isDark ? "light" : "dark"} mode`}
+            title={`Switch to ${isDark ? "light" : "dark"} mode`}
+          >
+            <span className={`theme-toggle-icon ${isDark ? "sun" : "moon"}`} aria-hidden="true" />
+          </button>
+        </div>
       </nav>
     </div>
   );

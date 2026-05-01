@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import useAuth from "../hooks/useAuth";
 import { ROUTES } from "../utils/constants";
 import NavbarComponent from "../components/Navbar";
@@ -8,13 +8,44 @@ import type { UserRole } from "../contexts/AuthContext";
 import "../css/Page.css"
 import "../css/App.css"
 
+const signupRoles: Array<{
+  value: Exclude<UserRole, null>;
+  title: string;
+  description: string;
+}> = [
+  {
+    value: "job_seeker",
+    title: "Job Seeker",
+    description: "Upload a resume and apply to openings.",
+  },
+  {
+    value: "employer",
+    title: "Employer",
+    description: "Post roles and review applicants.",
+  },
+  {
+    value: "admin",
+    title: "Admin",
+    description: "Moderate users and listings.",
+  },
+];
+
+function normalizeSignupRole(value: string | null): Exclude<UserRole, null> {
+  return value === "employer" || value === "admin" || value === "job_seeker"
+    ? value
+    : "job_seeker";
+}
+
 function Signup() {
   const { createUser, updateUserProfile, bootstrapUserProfile, deleteAccount, firebaseConfigured, user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<Exclude<UserRole, null>>("job_seeker");
+  const [role, setRole] = useState<Exclude<UserRole, null>>(() =>
+    normalizeSignupRole(searchParams.get("role"))
+  );
   const [error, setError] = useState<string>("");
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -98,94 +129,25 @@ function Signup() {
               />
             </div>
 
-            {/* Role Selection */}
             <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: 15 }}>
               <label className="form-label">Sign up as a</label>
-              <div style={{ display: "flex", gap: 12, paddingTop: 5 }}>
-
-                {/* Job Seeker Styling */}
-                <label style={{
-                  flex: 1,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 8,
-                  padding: "10px 13px",
-                  borderRadius: 20,
-                  border: `1.5px solid ${role === "job_seeker" ? "var(--button-heavy)" : "rgba(255,255,255,0.5)"}`,
-                  background: role === "job_seeker" ? "var(--button-light)" : "rgba(255,255,255,0.55)",
-                  cursor: "pointer",
-                  fontSize: "0.95rem",
-                  fontWeight: 600,
-                  color: "var(--text-1)",
-                  transition: "all 0.15s",
-                }}>
-                  <input
-                    type="radio"
-                    name="role"
-                    value="job_seeker"
-                    checked={role === "job_seeker"}
-                    onChange={() => setRole("job_seeker")}
-                    style={{ display: "none" }}
-                  />
-                  Job Seeker
-                </label>
-
-                {/* Employer Styling */}
-                <label style={{
-                  flex: 1,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 8,
-                  padding: "10px 13px",
-                  borderRadius: 20,
-                  border: `1.5px solid ${role === "employer" ? "var(--button-heavy)" : "rgba(255,255,255,0.5)"}`,
-                  background: role === "employer" ? "var(--button-light)" : "rgba(255,255,255,0.55)",
-                  cursor: "pointer",
-                  fontSize: "0.95rem",
-                  fontWeight: 600,
-                  color: "var(--text-1)",
-                  transition: "all 0.15s",
-                }}>
-                  <input
-                    type="radio"
-                    name="role"
-                    value="employer"
-                    checked={role === "employer"}
-                    onChange={() => setRole("employer")}
-                    style={{ display: "none" }}
-                  />
-                  Employer
-                </label>
-
-                {/* Admin Styling */}
-                <label style={{
-                  flex: 1,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 8,
-                  padding: "10px 13px",
-                  borderRadius: 20,
-                  border: `1.5px solid ${role === "admin" ? "var(--button-heavy)" : "rgba(255,255,255,0.5)"}`,
-                  background: role === "admin" ? "var(--button-light)" : "rgba(255,255,255,0.55)",
-                  cursor: "pointer",
-                  fontSize: "0.95rem",
-                  fontWeight: 600,
-                  color: "var(--text-1)",
-                  transition: "all 0.15s",
-                }}>
-                  <input
-                    type="radio"
-                    name="role"
-                    value="admin"
-                    checked={role === "admin"}
-                    onChange={() => setRole("admin")}
-                    style={{ display: "none" }}
-                  />
-                  Admin
-                </label>
+              <div className="role-option-grid">
+                {signupRoles.map((option) => (
+                  <label
+                    key={option.value}
+                    className={`role-option ${role === option.value ? "selected" : ""}`}
+                  >
+                    <input
+                      type="radio"
+                      name="role"
+                      value={option.value}
+                      checked={role === option.value}
+                      onChange={() => setRole(option.value)}
+                    />
+                    <span>{option.title}</span>
+                    <small>{option.description}</small>
+                  </label>
+                ))}
               </div>
             </div>
 

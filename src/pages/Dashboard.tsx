@@ -160,14 +160,22 @@ function Dashboard() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   <h2 style={{ margin: 0, color: "var(--text-1)" }}>Your Resume</h2>
                   <ResumeUpload currentFileId={resumeFileId} onUploaded={setResumeFileId} />
+                  <Link to="/jobs" className="btn" style={{ alignSelf: "flex-start" }}>
+                    Browse Jobs
+                  </Link>
                 </div>
               )}
 
               {role === "employer" && (
                 <>
-                  <Link to="/createPost" className="btn" style={{ color: "var(--text-2)", textAlign: "center" }}>
-                    Create Job Posting
-                  </Link>
+                  <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                    <Link to="/jobs/new" className="btn">
+                      Create Job Posting
+                    </Link>
+                    <Link to="/jobs" className="btn btn-quiet">
+                      View All Jobs
+                    </Link>
+                  </div>
                   <EmployerJobsPanel />
                 </>
               )}

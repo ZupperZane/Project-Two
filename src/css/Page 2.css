@@ -1,0 +1,141 @@
+#root {
+    width: 100%;
+    min-height: 100svh;
+    background: var(--base);
+    display: flex;
+    flex-direction: column;
+    border: none;
+    margin: 0;
+}
+
+.page {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 40px 24px;
+}
+
+.page-center {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 16px;
+}
+
+.btn {
+    display: inline-block;
+    padding: 13px 28px;
+    background: var(--button-mid);
+    color: var(--text-2);
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transition: background 0.2s, transform 0.15s, box-shadow 0.15s;
+}
+
+.btn:hover {
+    background: var(--button-heavy);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+}
+
+.form-input {
+    padding: 10px 13px;
+    border-radius: 9px;
+    border: 1.5px solid rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.55);
+    color: var(--text-1);
+    font-size: 0.95rem;
+    outline: none;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.form-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-1);
+    opacity: 0.6;
+}
+
+.text {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-Bottom: 10px;
+}
+
+.text h1 {
+    font-size: 2rem;
+    font-weight: 500;
+    color: var(--text-1);
+}
+
+.text p {
+    color: var(--text-1);
+}
+
+.text h2 {
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: var(--text-1);
+    padding: 0;
+    margin: 0;
+}
+
+.company-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+}
+
+.company-card {
+    background: var(--secondary1);
+    border-radius: 12px;
+    border-color: var(--secondary2);
+    padding: 24px;
+    box-shadow: var(--text-1);
+}
+
+.job-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+}
+
+.job-card {
+    background: var(--secondary1);
+    border-radius: 12px;
+    border: 1px solid var(--secondary2);
+    padding: 24px;
+}
+
+.section-divider {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-top: 20px;
+    border-top: 2px solid var(--secondary2);
+}
+
+.search-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+}
+
+.search-card {
+    background: var(--secondary1);
+    border-radius: 12px;
+    border: 1px solid var(--secondary2);
+    padding: 24px;
+}

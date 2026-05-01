@@ -43,15 +43,32 @@ export default function EmployerJobsPanel() {
 
   useEffect(() => {
     if (!selectedJobId || !user) return;
-    setLoadingApplicants(true);
-    user.getIdToken().then((token) =>
-      fetch(`/api/employer/jobs/${selectedJobId}/applicants`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then((r) => r.json())
-        .then((data) => { setApplicants(data); setLoadingApplicants(false); })
-        .catch(() => { setError("Failed to load applicants."); setLoadingApplicants(false); })
-    );
+
+    let active = true;
+    const currentUser = user;
+
+    async function loadApplicants() {
+      setLoadingApplicants(true);
+      try {
+        const token = await currentUser.getIdToken();
+        const response = await fetch(`/api/employer/jobs/${selectedJobId}/applicants`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await response.json();
+        if (!active) return;
+        setApplicants(data);
+      } catch {
+        if (active) setError("Failed to load applicants.");
+      } finally {
+        if (active) setLoadingApplicants(false);
+      }
+    }
+
+    void loadApplicants();
+
+    return () => {
+      active = false;
+    };
   }, [selectedJobId, user]);
 
   if (loadingJobs) return <p style={{ color: "var(--text-1)" }}>Loading jobs...</p>;
