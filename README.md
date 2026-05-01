@@ -236,8 +236,6 @@ Admin signup still relies on backend authorization. The UI can request an admin 
 - `src/css/Login.css`: login/signup/reset auth screens.
 - `src/css/DisplayAllJobs.css` and `src/css/DisplayAllCompanies.css`: listing-specific styles.
 
-Some duplicate files with names like `Home 2.tsx`, `App 2.css`, `Page 2.css`, and `index 2.css` may be leftover merge artifacts. The active app entry points and routes are the files listed above.
-
 ## Build And Deployment Notes
 
 - `index.js` serves `dist/` and falls back to `dist/index.html` for client-side routes.
