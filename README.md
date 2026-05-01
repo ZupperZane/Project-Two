@@ -1,5 +1,7 @@
 # Career Compass
 
+Live Link: https://project-two-production-2ace.up.railway.app/home
+
 ## Local Setup
 
 Create a local `.env` file with the needed server values:
