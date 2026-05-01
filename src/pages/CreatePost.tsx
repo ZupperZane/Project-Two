@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import NavbarComponent from "../components/Navbar";
 import useAuth from "../hooks/useAuth";
+import "../css/Page.css";
 
 type PayType = "hourly" | "salary";
 type TimeType = "full-time" | "part-time" | "contract" | "internship";
@@ -275,63 +276,93 @@ function CreatePostPage() {
 
   if (loading) {
     return (
-      <section>
+      <div className="page">
         <NavbarComponent />
-        <p>Loading...</p>
-      </section>
+        <div className="page-center">
+          <p className="muted-text">Loading...</p>
+        </div>
+      </div>
     );
   }
 
   if (!user) {
     return (
-      <section>
+      <div className="page">
         <NavbarComponent />
-        <h2>Create Job Posting</h2>
-        <p>You need to sign in first.</p>
-      </section>
+        <div className="page-content narrow">
+          <div className="content-panel">
+            <h2>Create Job Posting</h2>
+            <p className="muted-text">You need to sign in first.</p>
+            <Link to="/login" className="btn">Login</Link>
+          </div>
+        </div>
+      </div>
     );
   }
 
   if (role !== "employer") {
     return (
-      <section>
+      <div className="page">
         <NavbarComponent />
-        <h2>Create Job Posting</h2>
-        <p>Only employer accounts can create job listings.</p>
-      </section>
+        <div className="page-content narrow">
+          <div className="content-panel">
+            <h2>Create Job Posting</h2>
+            <p className="muted-text">Only employer accounts can create job listings.</p>
+            <Link to="/dashboard" className="btn btn-quiet">Back to Dashboard</Link>
+          </div>
+        </div>
+      </div>
     );
   }
 
   return (
-    <section>
+    <div className="page">
       <NavbarComponent />
-      <h2>Create Job Posting</h2>
-      <form onSubmit={handleSubmit} style={{ display: "grid", gap: "0.75rem", maxWidth: "560px" }}>
-        <div>
-          <label>
+      <div className="page-content narrow">
+        <div className="page-header">
+          <div className="page-header-copy">
+            <h1>Create Job Posting</h1>
+            <p>Publish a role, connect it to an institution, and collect applicants from your dashboard.</p>
+          </div>
+          <div className="action-row">
+            <Link to="/dashboard" className="btn btn-quiet">Dashboard</Link>
+            <Link to="/jobs" className="btn btn-quiet">All Jobs</Link>
+          </div>
+        </div>
+
+      <form onSubmit={handleSubmit} className="content-panel form-grid">
+        <div className="form-section">
+          <div className="form-section-title">
+            <h2>Institution</h2>
+            <p className="muted-text">Choose an existing institution or register a new one.</p>
+          </div>
+          <div className="segmented-options">
+          <label className={`choice-card ${institutionMode === "existing" ? "selected" : ""}`}>
             <input
               type="radio"
               name="institutionMode"
               checked={institutionMode === "existing"}
               onChange={() => setInstitutionMode("existing")}
-            />{" "}
+            />
             Use existing institution
           </label>
-          <label style={{ marginLeft: "1rem" }}>
+          <label className={`choice-card ${institutionMode === "new" ? "selected" : ""}`}>
             <input
               type="radio"
               name="institutionMode"
               checked={institutionMode === "new"}
               onChange={() => setInstitutionMode("new")}
-            />{" "}
+            />
             Register new institution
           </label>
+          </div>
         </div>
 
         {institutionMode === "existing" ? (
-          <div>
-            <label>Institution</label>
+          <div className="field">
+            <label className="form-label">Institution</label>
             <select
+              className="form-input"
               value={selectedInstitutionKey}
               onChange={(event) => setSelectedInstitutionKey(event.target.value)}
               disabled={loadingCompanies || companies.length === 0}
@@ -353,90 +384,146 @@ function CreatePostPage() {
             </select>
           </div>
         ) : (
-          <>
+          <div className="form-section">
+            <div className="field">
+              <label className="form-label">Institution Name</label>
             <input
+              className="form-input"
               type="text"
               placeholder="Institution Name"
               value={newInstitutionName}
               onChange={(event) => setNewInstitutionName(event.target.value)}
               required={institutionMode === "new"}
             />
+            </div>
+            <div className="field-row">
+              <div className="field">
+                <label className="form-label">Industry</label>
             <input
+              className="form-input"
               type="text"
               placeholder="Institution Industry (optional)"
               value={newInstitutionIndustry}
               onChange={(event) => setNewInstitutionIndustry(event.target.value)}
             />
+              </div>
+              <div className="field">
+                <label className="form-label">Location</label>
             <input
+              className="form-input"
               type="text"
               placeholder="Institution Location (optional)"
               value={newInstitutionLocation}
               onChange={(event) => setNewInstitutionLocation(event.target.value)}
             />
+              </div>
+            </div>
+            <div className="field">
+              <label className="form-label">Website</label>
             <input
+              className="form-input"
               type="url"
               placeholder="Institution Website (optional)"
               value={newInstitutionWebsite}
               onChange={(event) => setNewInstitutionWebsite(event.target.value)}
             />
+            </div>
+            <div className="field">
+              <label className="form-label">Description</label>
             <textarea
+              className="form-input"
               placeholder="Institution Description (optional)"
               value={newInstitutionDescription}
               onChange={(event) => setNewInstitutionDescription(event.target.value)}
               rows={3}
             />
-          </>
+            </div>
+          </div>
         )}
 
+        <div className="form-section">
+          <div className="form-section-title">
+            <h2>Role Details</h2>
+            <p className="muted-text">Add the core information applicants will scan first.</p>
+          </div>
+          <div className="field">
+            <label className="form-label">Job Title</label>
         <input
+          className="form-input"
           type="text"
           placeholder="Job Title"
           value={name}
           onChange={(event) => setName(event.target.value)}
           required
         />
+          </div>
 
+          <div className="field-row">
+            <div className="field">
+              <label className="form-label">Category</label>
         <input
+          className="form-input"
           type="text"
           placeholder="Category (e.g. Faculty)"
           value={category}
           onChange={(event) => setCategory(event.target.value)}
         />
+            </div>
 
+            <div className="field">
+              <label className="form-label">Department</label>
         <input
+          className="form-input"
           type="text"
           placeholder="Department (e.g. Computer Science)"
           value={department}
           onChange={(event) => setDepartment(event.target.value)}
         />
+            </div>
+          </div>
 
+          <div className="field">
+            <label className="form-label">Location</label>
         <input
+          className="form-input"
           type="text"
           placeholder="Job Location (e.g. Riverton, NY)"
           value={jobLocation}
           onChange={(event) => setJobLocation(event.target.value)}
         />
+          </div>
+        </div>
 
-        <div style={{ display: "flex", gap: "1rem" }}>
+        <div className="form-section">
+          <div className="form-section-title">
+            <h2>Compensation and Schedule</h2>
+          </div>
+          <div className="field-row">
+          <div className="field">
+            <label className="form-label">Pay</label>
           <input
+            className="form-input"
             type="number"
             placeholder={pay === "hourly" ? "Hourly rate ($)" : "Annual salary ($)"}
             value={salary}
             onChange={(event) => setSalary(event.target.value)}
             required
-            style={{ flex: 1 }}
           />
-          <select value={pay} onChange={(event) => setPay(event.target.value as PayType)}>
+          </div>
+          <div className="field">
+            <label className="form-label">Pay Type</label>
+          <select className="form-input" value={pay} onChange={(event) => setPay(event.target.value as PayType)}>
             <option value="hourly">Hourly</option>
             <option value="salary">Salary</option>
           </select>
+          </div>
         </div>
 
-        <div>
-          <label>Employment Type</label>
-          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.25rem" }}>
+        <div className="field">
+          <label className="form-label">Employment Type</label>
+          <div className="segmented-options">
             {TIME_TYPES.map((type) => (
-              <label key={type}>
+              <label key={type} className={`checkbox-chip ${timeType === type ? "selected" : ""}`}>
                 <input
                   type="radio"
                   name="timeType"
@@ -444,83 +531,111 @@ function CreatePostPage() {
                   checked={timeType === type}
                   onChange={() => setTimeType(type)}
                 />
-                {" "}{type}
+                {type}
               </label>
             ))}
           </div>
         </div>
 
-        <div>
-          <label>Shift</label>
-          <select value={shift} onChange={(event) => setShift(event.target.value as Shift)} style={{ display: "block", marginTop: "0.25rem" }}>
+        <div className="field-row">
+        <div className="field">
+          <label className="form-label">Shift</label>
+          <select className="form-input" value={shift} onChange={(event) => setShift(event.target.value as Shift)}>
             {SHIFTS.map((option) => (
               <option key={option} value={option}>{option}</option>
             ))}
           </select>
         </div>
 
-        <div>
-          <label>Application Deadline</label>
+        <div className="field">
+          <label className="form-label">Application Deadline</label>
           <input
+            className="form-input"
             type="date"
             value={applicationDeadline}
             onChange={(event) => setApplicationDeadline(event.target.value)}
           />
         </div>
+        </div>
 
-        <div>
-          <label>Expected Start Date</label>
+        <div className="field-row">
+        <div className="field">
+          <label className="form-label">Expected Start Date</label>
           <input
+            className="form-input"
             type="date"
             value={expectedStartDate}
             onChange={(event) => setExpectedStartDate(event.target.value)}
           />
         </div>
 
+        <div className="field">
+          <label className="form-label">Recruiter ID</label>
         <input
+          className="form-input"
           type="text"
           placeholder="Recruiter ID (optional)"
           value={recruiterId}
           onChange={(event) => setRecruiterId(event.target.value)}
         />
+        </div>
+        </div>
+        </div>
 
-        <div>
-          <label>Benefits</label>
-          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.25rem" }}>
+        <div className="form-section">
+          <div className="form-section-title">
+            <h2>Benefits and Description</h2>
+          </div>
+        <div className="field">
+          <label className="form-label">Benefits</label>
+          <div className="chip-options">
             {BENEFIT_OPTIONS.map((benefit) => (
-              <label key={benefit}>
+              <label key={benefit} className={`checkbox-chip ${benefits.includes(benefit) ? "selected" : ""}`}>
                 <input
                   type="checkbox"
                   checked={benefits.includes(benefit)}
                   onChange={() => toggleBenefit(benefit)}
                 />
-                {" "}{benefit}
+                {benefit}
               </label>
             ))}
           </div>
         </div>
 
+        <div className="field">
+          <label className="form-label">Job Description</label>
         <textarea
+          className="form-input"
           placeholder="Job description..."
           value={description}
           onChange={(event) => setDescription(event.target.value)}
           rows={5}
           required
         />
+        </div>
 
+        <div className="field">
+          <label className="form-label">Required Qualifications</label>
         <textarea
+          className="form-input"
           placeholder="Required qualifications (one per line)"
           value={qualificationsText}
           onChange={(event) => setQualificationsText(event.target.value)}
           rows={4}
         />
+        </div>
+        </div>
 
-        <button type="submit" disabled={submitting}>
+        <div className="action-row">
+        <button type="submit" className="btn" disabled={submitting}>
           {submitting ? "Publishing..." : "Post Job"}
         </button>
-        {error && <p style={{ color: "red" }}>{error}</p>}
+        <Link to="/dashboard" className="btn btn-quiet">Cancel</Link>
+        </div>
+        {error && <p style={{ color: "var(--neg-secondary)", fontWeight: 700 }}>{error}</p>}
       </form>
-    </section>
+      </div>
+    </div>
   );
 }
 

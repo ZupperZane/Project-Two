@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import useAuth from "../hooks/useAuth";
+import "../css/Page.css";
 
 type Applicant = {
   _id: string;
@@ -27,7 +28,9 @@ export default function EmployerJobsPanel() {
   const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [loadingJobs, setLoadingJobs] = useState(true);
   const [loadingApplicants, setLoadingApplicants] = useState(false);
+  const [deletingJobId, setDeletingJobId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -71,54 +74,96 @@ export default function EmployerJobsPanel() {
     };
   }, [selectedJobId, user]);
 
-  if (loadingJobs) return <p style={{ color: "var(--text-1)" }}>Loading jobs...</p>;
+  const deleteJob = async (job: Job) => {
+    if (!user) {
+      setActionError("You must be signed in to delete a posting.");
+      return;
+    }
+
+    const title = job.jobTitle ?? job.name;
+    const confirmed = window.confirm(`Delete "${title}"? This cannot be undone.`);
+    if (!confirmed) return;
+
+    setActionError(null);
+    setDeletingJobId(job._id);
+
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch(`/api/employer/jobs/${job._id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.error || "Failed to delete job posting.");
+      }
+
+      setJobs((current) => current.filter((item) => item._id !== job._id));
+      if (selectedJobId === job._id) {
+        setSelectedJobId(null);
+        setApplicants([]);
+      }
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to delete job posting.");
+    } finally {
+      setDeletingJobId(null);
+    }
+  };
+
+  if (loadingJobs) return <p className="muted-text">Loading jobs...</p>;
   if (error) return <p style={{ color: "var(--neg-secondary)" }}>{error}</p>;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20, width: "100%", maxWidth: 600 }}>
-      <h2 style={{ margin: 0, color: "var(--text-1)" }}>Your Job Postings</h2>
+    <div className="content-panel compact">
+      <div className="form-section-title">
+        <h2>Your Job Postings</h2>
+        <p className="muted-text">Select a posting to review applicants.</p>
+      </div>
 
       {jobs.length === 0 ? (
-        <p style={{ color: "var(--text-1)", opacity: 0.6 }}>No jobs posted yet.</p>
+        <p className="muted-text">No jobs posted yet.</p>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div className="stack-list">
           {jobs.map((job) => (
-            <button
-              key={job._id}
-              className="btn"
-              onClick={() => setSelectedJobId(job._id === selectedJobId ? null : job._id)}
-              style={{
-                color: "var(--text-2)",
-                opacity: selectedJobId === job._id ? 1 : 0.75,
-                textAlign: "left",
-              }}
-            >
-              {job.jobTitle ?? job.name}
-            </button>
+            <div key={job._id} className="posting-row">
+              <button
+                className={selectedJobId === job._id ? "btn posting-select" : "btn btn-quiet posting-select"}
+                onClick={() => setSelectedJobId(job._id === selectedJobId ? null : job._id)}
+                type="button"
+              >
+                {job.jobTitle ?? job.name}
+              </button>
+              <button
+                className="btn danger-button posting-delete"
+                disabled={deletingJobId === job._id}
+                onClick={() => deleteJob(job)}
+                type="button"
+              >
+                {deletingJobId === job._id ? "Deleting..." : "Delete"}
+              </button>
+            </div>
           ))}
         </div>
       )}
 
+      {actionError && (
+        <p style={{ color: "var(--neg-secondary)", fontWeight: 700 }}>{actionError}</p>
+      )}
+
       {selectedJobId && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div className="form-section">
           <h3 style={{ margin: 0, color: "var(--text-1)" }}>Applicants</h3>
           {loadingApplicants ? (
-            <p style={{ color: "var(--text-1)" }}>Loading...</p>
+            <p className="muted-text">Loading...</p>
           ) : applicants.length === 0 ? (
-            <p style={{ color: "var(--text-1)", opacity: 0.6 }}>No applicants yet.</p>
+            <p className="muted-text">No applicants yet.</p>
           ) : (
             applicants.map((app) => (
               <div
                 key={app._id}
-                style={{
-                  background: "rgba(255,255,255,0.06)",
-                  borderRadius: 10,
-                  padding: "14px 16px",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  gap: 12,
-                }}
+                className="applicant-card"
+                style={{ justifyContent: "space-between", alignItems: "center" }}
               >
                 <div>
                   <p style={{ margin: 0, fontWeight: 700, color: "var(--text-1)" }}>
@@ -137,7 +182,7 @@ export default function EmployerJobsPanel() {
                   <a
                     href={`/api/resume/${app.candidate.resumeFileId}`}
                     className="btn"
-                    style={{ color: "var(--text-2)", fontSize: "0.85rem", whiteSpace: "nowrap" }}
+                    style={{ fontSize: "0.85rem", whiteSpace: "nowrap" }}
                   >
                     Download Resume
                   </a>

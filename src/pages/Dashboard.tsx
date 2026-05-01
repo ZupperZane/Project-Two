@@ -133,56 +133,68 @@ function Dashboard() {
   return (
     <div className="page">
       <NavbarComponent />
-      <div className="page-center" style={{ paddingTop: 60, paddingBottom: 60 }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 32, width: "100%", maxWidth: 600 }}>
-
-          <div>
-            <h1 style={{ margin: 0, color: "var(--text-1)" }}>Dashboard</h1>
-            <p style={{ margin: "6px 0 0", color: "var(--text-1)", opacity: 0.6, fontSize: "0.9rem", paddingTop: 40 }}>
+      <div className="page-content narrow">
+        <div className="page-header">
+          <div className="page-header-copy">
+            <h1>Dashboard</h1>
+            <p>
               {user?.email} · {role ?? "..."}
             </p>
           </div>
+          {!banned && (
+            <div className="action-row">
+              {role === "job_seeker" && <Link to="/jobs" className="btn">Browse Jobs</Link>}
+              {role === "employer" && <Link to="/jobs/new" className="btn">Post Job</Link>}
+            </div>
+          )}
+        </div>
 
           {banned ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <h2 style={{ margin: 0, color: "var(--neg-secondary)" }}>Account Restricted</h2>
-              <p style={{ margin: 0, color: "var(--text-1)", opacity: 0.8, fontSize: "0.95rem" }}>
+            <div className="content-panel">
+              <h2 style={{ color: "var(--neg-secondary)" }}>Account Restricted</h2>
+              <p className="muted-text">
                 Your account has been restricted by an administrator
                 {banReason ? `: ${banReason}` : "."}
               </p>
-              <button className="btn" style={{ color: "var(--text-2)", marginTop: 8, alignSelf: "flex-start" }} onClick={signOutUser}>
+              <button className="btn" style={{ alignSelf: "flex-start" }} onClick={signOutUser}>
                 Sign Out
               </button>
             </div>
           ) : (
-            <>
+            <div className="dashboard-grid">
               {role === "job_seeker" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  <h2 style={{ margin: 0, color: "var(--text-1)" }}>Your Resume</h2>
+                <div className="content-panel compact">
+                  <div className="form-section-title">
+                    <h2>Your Resume</h2>
+                    <p className="muted-text">Keep your resume current before applying.</p>
+                  </div>
                   <ResumeUpload currentFileId={resumeFileId} onUploaded={setResumeFileId} />
-                  <Link to="/jobs" className="btn" style={{ alignSelf: "flex-start" }}>
-                    Browse Jobs
-                  </Link>
                 </div>
               )}
 
               {role === "employer" && (
                 <>
-                  <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  <div className="content-panel compact">
+                    <div className="form-section-title">
+                      <h2>Employer Tools</h2>
+                      <p className="muted-text">Create listings and monitor candidates from one place.</p>
+                    </div>
+                    <div className="action-row">
                     <Link to="/jobs/new" className="btn">
                       Create Job Posting
                     </Link>
                     <Link to="/jobs" className="btn btn-quiet">
                       View All Jobs
                     </Link>
+                    </div>
                   </div>
                   <EmployerJobsPanel />
                 </>
               )}
 
               {role === "admin" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                  <h2 style={{ margin: 0, color: "var(--text-1)" }}>User Management</h2>
+                <div className="content-panel compact">
+                  <h2>User Management</h2>
 
                   {adminActionError && (
                     <p style={{ margin: 0, color: "var(--neg-secondary)", fontWeight: 600, fontSize: "0.9rem" }}>
@@ -191,22 +203,13 @@ function Dashboard() {
                   )}
 
                   {adminUsersLoading && (
-                    <p style={{ margin: 0, color: "var(--text-1)", opacity: 0.6 }}>Loading users...</p>
+                    <p className="muted-text">Loading users...</p>
                   )}
 
                   {!adminUsersLoading && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 360, overflowY: "auto", paddingRight: 4 }}>
+                    <div className="admin-list" style={{ maxHeight: 360, overflowY: "auto", paddingRight: 4 }}>
                       {adminUsers.map((u) => (
-                        <div key={u.uid} style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          gap: 12,
-                          padding: "14px 18px",
-                          borderRadius: 12,
-                          background: "rgba(255,255,255,0.04)",
-                          border: "1.5px solid rgba(255,255,255,0.1)",
-                        }}>
+                        <div key={u.uid} className="admin-list-item" style={{ alignItems: "center", justifyContent: "space-between" }}>
                           <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
                             <p style={{ margin: 0, fontWeight: 600, color: "var(--text-1)", fontSize: "0.9rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                               {u.name || u.email}
@@ -248,29 +251,21 @@ function Dashboard() {
               )}
 
               {role === "admin" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                  <h2 style={{ margin: 0, color: "var(--text-1)" }}>Moderation Log</h2>
+                <div className="content-panel compact">
+                  <h2>Moderation Log</h2>
 
                   {modLogsLoading && (
-                    <p style={{ margin: 0, color: "var(--text-1)", opacity: 0.6 }}>Loading logs...</p>
+                    <p className="muted-text">Loading logs...</p>
                   )}
 
                   {!modLogsLoading && modLogs.length === 0 && (
-                    <p style={{ margin: 0, color: "var(--text-1)", opacity: 0.4, fontSize: "0.9rem" }}>No actions recorded yet.</p>
+                    <p className="muted-text">No actions recorded yet.</p>
                   )}
 
                   {!modLogsLoading && modLogs.length > 0 && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 400, overflowY: "auto", paddingRight: 4 }}>
+                    <div className="log-list" style={{ maxHeight: 400, overflowY: "auto", paddingRight: 4 }}>
                       {modLogs.map((log) => (
-                        <div key={log._id} style={{
-                          padding: "12px 18px",
-                          borderRadius: 12,
-                          background: "rgba(255,255,255,0.03)",
-                          border: "1.5px solid rgba(255,255,255,0.08)",
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: 4,
-                        }}>
+                        <div key={log._id} className="log-item" style={{ flexDirection: "column", gap: 4 }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
                             <p style={{ margin: 0, fontWeight: 700, color: "var(--text-1)", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>
                               {log.action.replace(/_/g, " ")}
@@ -301,22 +296,19 @@ function Dashboard() {
                 </div>
               )}
 
-              <div style={{ display: "flex", gap: 12, paddingTop: 12 }}>
-                <button className="btn" style={{ color: "var(--text-2)" }} onClick={signOutUser}>
+              <div className="action-row dashboard-footer">
+                <button className="btn btn-quiet" onClick={signOutUser}>
                   Sign Out
                 </button>
                 <button
-                  className="btn"
-                  style={{ color: "var(--neg-secondary)", background: "transparent", border: "1.5px solid var(--neg-secondary)" }}
+                  className="btn danger-button"
                   onClick={handleDelete}
                 >
                   Delete Account
                 </button>
               </div>
-            </>
+            </div>
           )}
-
-        </div>
       </div>
     </div>
   );
