@@ -314,7 +314,7 @@ function Dashboard() {
                           </p>
                         </div>
 
-                        {u.uid !== user?.uid && (
+                        {u.uid !== user?.uid && u.role !== "admin" && (
                           u.status === "disabled" ? (
                             <button className="btn" style={{ flexShrink: 0, fontSize: "0.85rem" }} onClick={() => handleUnban(u.uid)}>
                               Unban

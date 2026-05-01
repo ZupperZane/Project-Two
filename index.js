@@ -1304,6 +1304,11 @@ app.patch(
         return;
       }
 
+      if (normalizeRole(targetUser.role) === USER_ROLES.ADMIN) {
+        res.status(403).json({ error: "Admins cannot perform status actions on other admins." });
+        return;
+      }
+
       if (action === "disable") {
         const now = getNow();
         await req.db.collection("users").updateOne(
